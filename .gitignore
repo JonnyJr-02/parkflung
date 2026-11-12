@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dev-dist/
+*.tsbuildinfo
+coverage/
+.env
+.env.*
+.claude/settings.local.json
+.claude/launch.json
+.claude/skills/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
