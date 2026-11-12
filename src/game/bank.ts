@@ -1,8 +1,10 @@
+import { makeKey, tokenize } from './match'
 import { compile, parseText, questionId, type Question, type RawQuestion } from './parse'
+import { TIERS, type Tier } from './tiers'
 
 const packs = import.meta.glob<string>('../data/*.txt', { query: '?raw', import: 'default', eager: true })
 
-/** The questions shipped with the app, parsed once. */
+/** The questions written in src/data, parsed once. */
 export const builtIn: { questions: RawQuestion[]; problems: string[] } = (() => {
   const questions: RawQuestion[] = []
   const problems: string[] = []
@@ -14,10 +16,282 @@ export const builtIn: { questions: RawQuestion[]; problems: string[] } = (() => 
   return { questions, problems }
 })()
 
-/** Built-in questions plus the uploaded ones; an uploaded question replaces a built-in one with the same text. */
+/**
+ * "Starts with the letter…" questions built from the written ones: each group pools the answers of
+ * some questions, keeps those starting with one letter and ranks them again into the five tiers,
+ * so the commonest answers of the pool stay the commonest ones for that letter.
+ */
+export const LETTER_GROUPS: ReadonlyArray<{ subject: string; sources: string[] }> = [
+  {
+    subject: 'Un animale',
+    sources: [
+      'Un animale della fattoria',
+      'Un animale africano',
+      'Un animale del bosco',
+      'Un animale che vive in mare',
+      'Un uccello',
+      'Un insetto o un piccolo animaletto',
+      'Un rettile o un anfibio',
+      'Un felino',
+      'Un primate',
+      'Un animale domestico',
+      'Un animale australiano',
+      'Un animale che vive al Polo Nord o al Polo Sud',
+      'Un animale del Sud America',
+      'Un animale asiatico',
+      'Un animale notturno',
+      'Un animale che va in letargo',
+      'Un animale con le strisce o con le macchie',
+      'Un animale velocissimo o lentissimo',
+      'Un animale selvatico che vive in Italia',
+      'Un animale velenoso',
+      'Un animale con le corna',
+      'Un uccello rapace',
+      "Un pesce d'acqua dolce",
+    ],
+  },
+  {
+    subject: 'Una cosa da mangiare',
+    sources: [
+      'Un frutto',
+      'Una verdura o un ortaggio',
+      'Un formato di pasta',
+      'Un formaggio italiano',
+      'Un dolce tipico italiano',
+      'Un salume',
+      'Un pesce che si mangia',
+      'Un tipo di pane o un prodotto da forno',
+      'Un primo piatto della cucina italiana',
+      'Un secondo piatto della cucina italiana',
+      'Un antipasto',
+      'Un cibo da street food italiano',
+    ],
+  },
+  { subject: 'Un frutto o una verdura', sources: ['Un frutto', 'Una verdura o un ortaggio', 'Un tipo di frutta secca'] },
+  {
+    subject: 'Uno Stato del mondo',
+    sources: [
+      "Uno Stato dell'Unione Europea",
+      "Uno Stato dell'Africa",
+      "Uno Stato dell'Asia",
+      'Uno Stato del Sud America',
+      "Uno Stato dell'Oceania",
+      "Un Paese dell'America centrale o dei Caraibi",
+      "Un Paese dell'ex Unione Sovietica",
+      'Uno Stato europeo che non fa parte dell\'Unione Europea',
+    ],
+  },
+  {
+    subject: 'Una città del mondo',
+    sources: [
+      'Una capitale europea',
+      'Una capitale asiatica',
+      'Una capitale africana',
+      'Una capitale delle Americhe',
+      'Una città degli Stati Uniti',
+      'Una città della Francia',
+      'Una città della Spagna',
+      'Una città della Germania',
+      'Una città del Regno Unito',
+      'Una città del Giappone',
+      'Una città italiana',
+    ],
+  },
+  { subject: 'Una città italiana', sources: ['Una città italiana', 'Un capoluogo di regione italiano'] },
+  {
+    subject: 'Un oggetto di casa',
+    sources: [
+      'Un oggetto che trovi in cucina',
+      'Una cosa che trovi in bagno',
+      'Un mobile o un arredo di casa',
+      'Un elettrodomestico',
+      'Un oggetto che trovi in camera da letto',
+    ],
+  },
+  { subject: 'Un capo di abbigliamento o un accessorio', sources: ['Un capo di abbigliamento', 'Un tipo di calzatura', 'Un tipo di cappello o copricapo', 'Un accessorio di moda'] },
+  { subject: 'Un mestiere', sources: ['Un mestiere'] },
+  { subject: 'Un colore', sources: ['Un colore'] },
+  {
+    subject: 'Uno sport',
+    sources: ['Uno sport olimpico', 'Un gioco o uno sport con la palla', 'Uno sport di squadra', 'Uno sport invernale', "Un'arte marziale o uno sport da combattimento"],
+  },
+  {
+    subject: 'Una marca',
+    sources: [
+      'Una marca di automobili',
+      'Un marchio di moda italiano',
+      'Una marca di moto o scooter',
+      'Una marca di telefoni o di elettronica',
+      'Una marca di birra',
+      'Una marca di abbigliamento sportivo',
+      'Una marca di biscotti, merendine o snack',
+      'Una catena di negozi o di fast food',
+      'Una marca di pasta',
+      'Una marca di caffè',
+      'Una marca di giocattoli',
+      'Una marca di elettrodomestici',
+      'Una marca di orologi',
+      'Una marca di profumi o di cosmetici',
+      'Una compagnia aerea',
+    ],
+  },
+  { subject: 'Un fiore o una pianta', sources: ['Un fiore', 'Un albero', 'Una pianta da appartamento'] },
+  { subject: 'Una parte del corpo umano', sources: ['Una parte del corpo umano', 'Un organo interno del corpo umano', 'Un osso del corpo umano'] },
+  {
+    subject: 'Un personaggio di fantasia',
+    sources: [
+      'Un personaggio Disney classico',
+      'Un personaggio di Harry Potter',
+      "Un personaggio de Il Signore degli Anelli o de Lo Hobbit",
+      'Un personaggio dei Simpson',
+      'Un personaggio di Super Mario',
+      'Un personaggio di Star Wars',
+      'Un personaggio di Dragon Ball',
+      'Un supereroe',
+      'Un cartone animato o un anime',
+      'Un personaggio dei fumetti italiani',
+      'Un personaggio di Friends',
+      'Un personaggio della Casa di carta',
+      'Un personaggio di Stranger Things',
+      'Un personaggio de Il Trono di Spade',
+      'Un personaggio dei Griffin',
+      'Un personaggio di Pinocchio',
+      'Un personaggio di Shrek',
+      'Un personaggio di Toy Story',
+      'Un personaggio dei Looney Tunes',
+      'Un personaggio dei videogiochi',
+    ],
+  },
+  { subject: 'Un nome di persona', sources: ['Un nome maschile', 'Un nome femminile'] },
+  { subject: 'Un nome maschile', sources: ['Un nome maschile'] },
+  { subject: 'Un nome femminile', sources: ['Un nome femminile'] },
+  { subject: 'Uno strumento musicale', sources: ['Uno strumento musicale', 'Uno strumento a fiato', 'Uno strumento a percussione', 'Uno strumento a corda'] },
+  {
+    subject: 'Un luogo famoso di una città',
+    sources: [
+      'Un monumento o un luogo famoso di Roma',
+      'Un luogo famoso di Milano',
+      'Un luogo famoso di Firenze',
+      'Un luogo famoso di Venezia',
+      'Un luogo famoso di Napoli',
+      'Un monumento o un luogo famoso di Torino',
+      'Un luogo famoso di Parigi',
+      'Un luogo famoso di Londra',
+      'Un luogo famoso di New York',
+    ],
+  },
+  { subject: 'Un mezzo di trasporto o un\'imbarcazione', sources: ['Un mezzo di trasporto', 'Un tipo di imbarcazione'] },
+  {
+    // The letter is the one the player types: "Messi" counts for M, "Lionel Messi" for L.
+    subject: 'Un personaggio famoso (nome o cognome)',
+    sources: [
+      'Uno scienziato o un inventore famoso',
+      'Un pittore famoso',
+      'Un compositore di musica classica',
+      'Uno scrittore o un poeta italiano',
+      'Un regista famoso',
+      'Un attore italiano',
+      "Un'attrice italiana",
+      'Un attore di Hollywood',
+      "Un'attrice di Hollywood",
+      'Un cantante o un gruppo italiano',
+      'Un cantante o un gruppo pop straniero',
+      'Un calciatore italiano',
+      'Un calciatore straniero famoso',
+      'Un tennista famoso',
+      'Un filosofo',
+      'Un personaggio storico italiano',
+    ],
+  },
+  {
+    subject: 'Un film, una serie TV o un libro',
+    sources: [
+      'Un film italiano famoso',
+      'Un film horror',
+      'Un film di fantascienza',
+      'Un film vincitore dell\'Oscar al miglior film',
+      'Una serie TV',
+      'Un romanzo famoso',
+      'Un libro per bambini o ragazzi',
+      'Un film d\'animazione Disney o Pixar',
+    ],
+  },
+  {
+    subject: 'Una cosa da bere',
+    sources: [
+      'Una bevanda analcolica',
+      'Un cocktail',
+      'Un vino italiano',
+      'Un liquore o un superalcolico',
+      'Un tipo di caffè',
+      'Un tipo di tè o di tisana',
+      'Una marca di birra',
+    ],
+  },
+]
+
+/** A letter question needs at least this many answers to be fun. */
+export const MIN_LETTER_ANSWERS = 12
+/** Share of each letter's answers, from the commonest tier to the rarest. */
+const TIER_SHARE: Record<Tier, number> = { c: 0.12, n: 0.16, r: 0.2, e: 0.22, t: 0.3 }
+
+function initial(form: string): string {
+  return tokenize(form).join(' ').charAt(0)
+}
+
+export function deriveLetterQuestions(written: readonly RawQuestion[]): RawQuestion[] {
+  const byPrompt = new Map(written.map((raw) => [raw.q, raw]))
+  const out: RawQuestion[] = []
+  for (const group of LETTER_GROUPS) {
+    // Every answer of the pool once, ranked by its tier in its own question, then by its place there.
+    const pool: { forms: string[]; tier: Tier; order: number }[] = []
+    const taken = new Set<string>()
+    for (const source of group.sources) {
+      const raw = byPrompt.get(source)
+      if (!raw) continue
+      TIERS.forEach((tier) =>
+        raw[tier].forEach((entry, order) => {
+          const forms = entry
+            .split('/')
+            .map((form) => form.trim())
+            .filter((form) => form && !taken.has(makeKey(form).squashed))
+          if (forms.length === 0) return
+          forms.forEach((form) => taken.add(makeKey(form).squashed))
+          pool.push({ forms, tier, order })
+        }),
+      )
+    }
+    pool.sort((a, b) => TIERS.indexOf(a.tier) - TIERS.indexOf(b.tier) || a.order - b.order)
+
+    for (const letter of 'abcdefghijklmnopqrstuvwxyz') {
+      const entries = pool
+        .map((answer) => answer.forms.filter((form) => initial(form) === letter))
+        .filter((forms) => forms.length > 0)
+        .map((forms) => forms.join('/'))
+      if (entries.length < MIN_LETTER_ANSWERS) continue
+      const question: RawQuestion = { q: `${group.subject} che inizia con la ${letter.toUpperCase()}`, c: [], n: [], r: [], e: [], t: [] }
+      let start = 0
+      TIERS.forEach((tier, index) => {
+        const rest = TIERS.slice(index + 1).length
+        const size =
+          index === TIERS.length - 1
+            ? entries.length - start
+            : Math.min(Math.max(1, Math.round(entries.length * TIER_SHARE[tier])), entries.length - start - rest)
+        question[tier] = entries.slice(start, start + size)
+        start += size
+      })
+      out.push(question)
+    }
+  }
+  return out
+}
+
+export const derived: RawQuestion[] = deriveLetterQuestions(builtIn.questions)
+
+/** Every question in the app: written, derived, then uploaded (which replaces one with the same text). */
 export function mergeBank(custom: readonly RawQuestion[]): Question[] {
   const byId = new Map<string, Question>()
-  for (const raw of [...builtIn.questions, ...custom]) {
+  for (const raw of [...builtIn.questions, ...derived, ...custom]) {
     const question = compile(raw)
     if (question.answers.length > 0) byId.set(question.id, question)
   }
@@ -52,18 +326,22 @@ function shuffle<T>(items: readonly T[], random: () => number): T[] {
   return out
 }
 
-/** Never-played questions first, in random order; when they run out, the ones played longest ago. */
+/**
+ * Never-played questions first, in random order. When they run out and `repeat` is on, the ones
+ * played longest ago come back; with `repeat` off the result can hold fewer than `count`.
+ */
 export function pickQuestions(
   bank: readonly Question[],
   seen: Readonly<Record<string, number>>,
   count: number,
+  repeat = true,
   random: () => number = Math.random,
 ): Question[] {
   const fresh = shuffle(
     bank.filter((question) => seen[question.id] === undefined),
     random,
   )
-  if (fresh.length >= count) return fresh.slice(0, count)
+  if (fresh.length >= count || !repeat) return fresh.slice(0, count)
   const played = shuffle(
     bank.filter((question) => seen[question.id] !== undefined),
     random,

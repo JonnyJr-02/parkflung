@@ -15,11 +15,13 @@ export interface SavedState {
   games: GameRecord[]
   /** Questions added from a file in Impostazioni. */
   custom: RawQuestion[]
+  /** When false, a question already played never comes back. */
+  repeat: boolean
 }
 
 const KEY = 'parkflung:v1'
 const MAX_GAMES = 1000
-const EMPTY: SavedState = { seen: {}, games: [], custom: [] }
+const EMPTY: SavedState = { seen: {}, games: [], custom: [], repeat: true }
 
 function read(): SavedState {
   try {
@@ -30,6 +32,7 @@ function read(): SavedState {
       seen: data.seen && typeof data.seen === 'object' ? data.seen : {},
       games: Array.isArray(data.games) ? data.games : [],
       custom: Array.isArray(data.custom) ? data.custom : [],
+      repeat: data.repeat !== false,
     }
   } catch {
     return EMPTY

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
-import { builtIn, countFresh, mergeCustom } from '../game/bank'
+import { builtIn, countFresh, derived, mergeCustom } from '../game/bank'
 import { parseUpload, type Question } from '../game/parse'
 import { summarize, update, useSavedState } from '../game/store'
-import { MAX_SCORE, OUTCOMES, STOPS, stopsReached, TIER_INFO, TIERS } from '../game/tiers'
+import { MAX_SCORE, OUTCOMES, QUESTIONS_PER_GAME, STOPS, stopsReached, TIER_INFO, TIERS } from '../game/tiers'
 import type { Result } from './Game'
 import { TrailScene } from './TrailScene'
 
@@ -15,10 +15,20 @@ function GearIcon() {
   )
 }
 
+function homeNote(total: number, fresh: number, repeat: boolean): string {
+  if (!repeat && fresh < QUESTIONS_PER_GAME) {
+    return 'Hai finito le domande nuove. Attiva «Ripeti le domande» nelle impostazioni, oppure azzera i progressi.'
+  }
+  if (!repeat) return `${fresh} domande nuove rimaste su ${total}. Le domande già giocate non ricapitano.`
+  if (fresh > 0) return `${fresh} domande ancora mai giocate su ${total}.`
+  return `Hai giocato tutte le ${total} domande: ora ricapitano, a partire da quelle viste da più tempo.`
+}
+
 export function Home({ bank, onPlay, onSettings }: { bank: Question[]; onPlay: () => void; onSettings: () => void }) {
   const saved = useSavedState()
   const stats = summarize(saved.games)
   const fresh = countFresh(bank, saved.seen)
+  const canPlay = saved.repeat || fresh >= QUESTIONS_PER_GAME
 
   return (
     <main className="screen home">
@@ -45,14 +55,16 @@ export function Home({ bank, onPlay, onSettings }: { bank: Question[]; onPlay: (
             <dd>{stats.average}</dd>
           </div>
         </dl>
-        <button type="button" className="btn" onClick={onPlay}>
-          Gioca
-        </button>
-        <p className="note">
-          {fresh > 0
-            ? `${fresh} domande ancora mai giocate su ${bank.length}.`
-            : `Hai giocato tutte le ${bank.length} domande: ora ricapitano, a partire da quelle viste da più tempo.`}
-        </p>
+        {canPlay ? (
+          <button type="button" className="btn" onClick={onPlay}>
+            Gioca
+          </button>
+        ) : (
+          <button type="button" className="btn" onClick={onSettings}>
+            Apri le impostazioni
+          </button>
+        )}
+        <p className="note">{homeNote(bank.length, fresh, saved.repeat)}</p>
       </div>
     </main>
   )
@@ -201,9 +213,30 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
       <section className="panel">
         <h2>Domande</h2>
         <p>
-          {bank.length} domande in tutto: {builtIn.questions.length} incluse nell'app e {saved.custom.length} caricate
-          da te. Ne hai già giocate {played}.
+          {bank.length} domande in tutto: {builtIn.questions.length + derived.length} incluse nell'app e{' '}
+          {saved.custom.length} caricate da te. Ne hai già giocate {played}.
         </p>
+        <label className="switch-row">
+          <span className="switch-text">
+            <span className="switch-title">Ripeti le domande</span>
+            <span className="note">
+              {saved.repeat
+                ? 'Quando le hai giocate tutte, ricapitano a partire da quelle viste da più tempo.'
+                : 'Ogni domanda esce una volta sola. Quando finiscono, azzera i progressi per ricominciare.'}
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label="Ripeti le domande"
+            className="switch"
+            checked={saved.repeat}
+            onChange={(event) => {
+              const repeat = event.target.checked
+              update((current) => ({ ...current, repeat }))
+            }}
+          />
+        </label>
         <input ref={fileRef} type="file" accept=".json,.txt,application/json,text/plain" hidden onChange={onFile} />
         <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
           Carica domande da file

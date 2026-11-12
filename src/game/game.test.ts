@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { builtIn, mergeBank, mergeCustom, pickQuestions } from './bank'
+import { builtIn, derived, LETTER_GROUPS, MIN_LETTER_ANSWERS, mergeBank, mergeCustom, pickQuestions } from './bank'
 import { editDistance, matchAnswer, stem, tokenize } from './match'
 import { compile, parseJson, parseText, parseUpload, type RawQuestion } from './parse'
 import { MAX_SCORE, stopsReached, TIERS } from './tiers'
@@ -109,6 +109,12 @@ describe('choosing questions', () => {
     expect(picked).not.toContain(bank[5]!.id)
   })
 
+  it('never brings a played question back when repeating is off', () => {
+    const seen = Object.fromEntries(bank.slice(0, 6).map((question, i) => [question.id, i + 1]))
+    const picked = pickQuestions(bank, seen, 5, false).map((question) => question.id)
+    expect(picked.sort()).toEqual([bank[6]!.id, bank[7]!.id].sort())
+  })
+
   it('replaces an uploaded question with the same text', () => {
     const merged = mergeCustom([fruit], [{ ...fruit, c: ['pera'] }, { ...fruit, q: 'Altro' }])
     expect(merged).toMatchObject({ added: 1, replaced: 1 })
@@ -128,18 +134,38 @@ describe('built-in questions', () => {
 
   it('parse without problems and have unique texts', () => {
     expect(builtIn.problems).toEqual([])
-    expect(bank.length).toBe(builtIn.questions.length)
-    expect(bank.length).toBeGreaterThanOrEqual(150)
+    expect(bank.length).toBe(builtIn.questions.length + derived.length)
   })
 
   it('have answers in every tier, none listed twice', () => {
     const issues: string[] = []
-    for (const raw of builtIn.questions) {
+    for (const raw of [...builtIn.questions, ...derived]) {
       const question = compile(raw)
       for (const tier of TIERS) if (raw[tier].length === 0) issues.push(`${raw.q}: nessuna risposta ${tier}`)
       const written = TIERS.reduce((sum, tier) => sum + raw[tier].length, 0)
       if (written !== question.answers.length) issues.push(`${raw.q}: una risposta è ripetuta`)
     }
     expect(issues).toEqual([])
+  })
+
+  it('name only questions that exist as letter sources', () => {
+    const prompts = new Set(builtIn.questions.map((raw) => raw.q))
+    const missing = LETTER_GROUPS.flatMap((group) => group.sources.filter((source) => !prompts.has(source)))
+    expect(missing).toEqual([])
+  })
+
+  it('build letter questions that keep the letter and the order of rarity', () => {
+    const fruit = derived.find((raw) => raw.q === 'Una cosa da mangiare che inizia con la M')!
+    expect(fruit.c[0]).toBe('mela')
+    for (const raw of derived) {
+      const letter = raw.q.slice(-1).toLowerCase()
+      const answers = TIERS.flatMap((tier) => raw[tier])
+      expect(answers.length).toBeGreaterThanOrEqual(MIN_LETTER_ANSWERS)
+      for (const answer of answers) for (const form of answer.split('/')) expect(tokenize(form).join(' ')[0]).toBe(letter)
+    }
+  })
+
+  it('reach the target size', () => {
+    expect(bank.length).toBeGreaterThanOrEqual(700)
   })
 })

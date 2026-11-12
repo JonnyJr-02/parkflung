@@ -41,8 +41,16 @@ function hash(text: string): string {
   return h.toString(36)
 }
 
+/** Same text, give or take case, accents and punctuation, gives the same id. Articles count: "con la I" ≠ "con la L". */
 export function questionId(prompt: string): string {
-  return hash(makeKey(prompt).squashed)
+  return hash(
+    prompt
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim(),
+  )
 }
 
 function cleanList(value: unknown): string[] {

@@ -18,8 +18,11 @@ export function App() {
   const [view, setView] = useState<View>({ name: 'home' })
 
   function play() {
-    const questions = pickQuestions(bank, getState().seen, QUESTIONS_PER_GAME)
-    setView({ name: 'game', id: Date.now(), questions })
+    const { seen, repeat } = getState()
+    const questions = pickQuestions(bank, seen, QUESTIONS_PER_GAME, repeat)
+    // With repetition off and the new questions used up, Home explains what to do.
+    if (questions.length < QUESTIONS_PER_GAME) setView({ name: 'home' })
+    else setView({ name: 'game', id: Date.now(), questions })
   }
 
   function finish(results: Result[]) {
