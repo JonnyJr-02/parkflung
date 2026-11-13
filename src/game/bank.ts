@@ -4,25 +4,30 @@ import { TIERS, type Tier } from './tiers'
 
 const packs = import.meta.glob<string>('../data/*.txt', { query: '?raw', import: 'default', eager: true })
 
-/** Share of a question's answers in each tier, commonest first: a normal curve cut into five 1σ-wide bins. */
-export const GAUSSIAN_SHARE = [0.067, 0.242, 0.383, 0.242, 0.067] as const
+/**
+ * Share of a question's answers in each tier, commonest first: the right half of a normal curve
+ * cut into bins half a σ wide, so "comune" is the biggest tier and each rarer one is smaller.
+ */
+export const GAUSSIAN_SHARE = [0.383, 0.3, 0.184, 0.088, 0.045] as const
 
 /** How many answers go in each tier for a question with `n` answers: at least one each, largest remainders first. */
 export function gaussianSizes(n: number): number[] {
   const exact = GAUSSIAN_SHARE.map((share) => share * n)
   const sizes = exact.map((x) => Math.max(1, Math.floor(x)))
   let total = sizes.reduce((sum, size) => sum + size, 0)
-  const byRemainder = [0, 1, 2, 3, 4].sort((a, b) => exact[b]! - Math.floor(exact[b]!) - (exact[a]! - Math.floor(exact[a]!)))
+  // A tier already raised to one answer gets nothing more from the remainders.
+  const remainder = exact.map((x) => (x < 1 ? -1 : x - Math.floor(x)))
+  const byRemainder = [0, 1, 2, 3, 4].sort((a, b) => remainder[b]! - remainder[a]!)
   for (let k = 0; total < n; k++, total++) sizes[byRemainder[k % 5]!]! += 1
   while (total > n) {
     sizes[sizes.indexOf(Math.max(...sizes))]! -= 1
     total--
   }
-  return sizes
+  return sizes.sort((a, b) => b - a)
 }
 
 /**
- * Re-cuts a question's tiers along the normal curve. The answers keep their order, from the one
+ * Re-cuts a question's tiers along the half bell curve. The answers keep their order, from the one
  * most people would say to the rarest, so the rarity of each answer decides its tier.
  */
 export function gaussianTiers(raw: RawQuestion): RawQuestion {

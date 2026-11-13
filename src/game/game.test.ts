@@ -195,16 +195,17 @@ describe('suspense', () => {
 })
 
 describe('gaussian tiers', () => {
-  it('cuts answers along the normal curve, at least one per tier', async () => {
+  it('puts the most answers in comune and fewer in each rarer tier, at least one each', async () => {
     const { gaussianSizes } = await import('./bank')
-    expect(gaussianSizes(100)).toEqual([7, 24, 38, 24, 7])
-    expect(gaussianSizes(8)).toEqual([1, 2, 3, 1, 1])
-    for (const n of [5, 6, 13, 47, 151]) {
+    expect(gaussianSizes(100)).toEqual([38, 30, 18, 9, 5])
+    expect(gaussianSizes(8)).toEqual([3, 2, 1, 1, 1])
+    for (let n = 5; n <= 400; n++) {
       const sizes = gaussianSizes(n)
       expect(sizes.reduce((a, b) => a + b, 0)).toBe(n)
       expect(Math.min(...sizes)).toBeGreaterThanOrEqual(1)
-      expect(sizes[2]).toBe(Math.max(...sizes))
+      for (let tier = 1; tier < 5; tier++) expect(sizes[tier]).toBeLessThanOrEqual(sizes[tier - 1]!)
     }
+    expect(gaussianSizes(60)[0]).toBeGreaterThan(gaussianSizes(60)[4]! * 5)
   })
 
   it('keeps the order of the answers', async () => {
@@ -212,6 +213,7 @@ describe('gaussian tiers', () => {
     const answers = Array.from({ length: 20 }, (_, i) => `a${i}`)
     const cut = gaussianTiers({ q: 'x', c: answers.slice(0, 2), n: answers.slice(2, 5), r: answers.slice(5, 9), e: answers.slice(9, 14), t: answers.slice(14) })
     expect([...cut.c, ...cut.n, ...cut.r, ...cut.e, ...cut.t]).toEqual(answers)
-    expect(cut.c).toEqual(['a0'])
+    expect(cut.c).toEqual(answers.slice(0, 7))
+    expect(cut.t).toEqual(['a19'])
   })
 })
