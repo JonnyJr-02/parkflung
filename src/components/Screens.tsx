@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { builtIn, countFresh, derived, mergeCustom } from '../game/bank'
 import { parseUpload, type Question } from '../game/parse'
+import { TIMER_CHOICES, timerLabel } from '../game/timer'
 import { summarize, update, useSavedState } from '../game/store'
 import { MAX_SCORE, OUTCOMES, QUESTIONS_PER_GAME, STOPS, stopsReached, TIER_INFO, TIERS } from '../game/tiers'
 import type { Result } from './Game'
@@ -97,7 +98,7 @@ function ResultCard({ result, number }: { result: Result; number: number }) {
         <span className="result-main">
           <span className="result-prompt">{result.question.prompt}</span>
           <span className="result-answer">
-            {result.answer ? result.answer.label : result.typed ? `«${result.typed}»` : 'Passata'}
+            {result.timedOut ? 'Tempo scaduto' : result.answer ? result.answer.label : result.typed ? `«${result.typed}»` : 'Passata'}
           </span>
         </span>
         <span className="result-tier">
@@ -285,6 +286,47 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
               ? 'Sempre chiaro: il manifesto al tramonto.'
               : 'Sempre scuro: il manifesto di notte.'}
         </p>
+      </section>
+
+      <section className="panel">
+        <h2>Timer</h2>
+        <label className="switch-row">
+          <span className="switch-text">
+            <span className="switch-title">Timer per ogni domanda</span>
+            <span className="note">
+              {saved.timerOn
+                ? `Hai ${timerLabel(saved.timerSeconds)} per ognuna delle ${QUESTIONS_PER_GAME} domande. Se il tempo finisce, quella domanda conta come «${TIER_INFO.miss.label}».`
+                : 'Nessuna fretta: pensa quanto vuoi.'}
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label="Timer per ogni domanda"
+            className="switch"
+            checked={saved.timerOn}
+            onChange={(event) => {
+              const timerOn = event.target.checked
+              update((current) => ({ ...current, timerOn }))
+            }}
+          />
+        </label>
+        {saved.timerOn && (
+          <div className="segmented four" role="radiogroup" aria-label="Tempo per ogni domanda">
+            {TIMER_CHOICES.map((seconds) => (
+              <button
+                key={seconds}
+                type="button"
+                role="radio"
+                aria-checked={saved.timerSeconds === seconds}
+                className={saved.timerSeconds === seconds ? 'on' : ''}
+                onClick={() => update((current) => ({ ...current, timerSeconds: seconds }))}
+              >
+                {timerLabel(seconds)}
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="panel">

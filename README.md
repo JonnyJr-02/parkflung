@@ -11,6 +11,9 @@ dal carro di legno fino alla casa di Ale a Varigotti. App per telefono (PWA), in
 - **Rarità a mezza campana:** le risposte di ogni domanda, dalla più comune alla più rara, sono
   divise come la metà di una gaussiana: la fascia più grande è la comune e ogni fascia più rara è più
   piccola (circa 38% comuni, 30% non comuni, 18% rare, 9% esclusive, 5% Marco B.).
+- **Timer (facoltativo):** in Impostazioni si accende un timer per ogni domanda, da 30 s, 1, 2 o 5 minuti.
+  Sta nell'angolo in alto a destra, passa da verde a giallo, arancione e rosso; se finisce, quella
+  domanda vale «morto di CACCA ADDOSSO !».
 - **Nuove domande:** Impostazioni → «Carica domande da file» (JSON o testo, c'è un file di esempio).
 
 ## Formato delle domande

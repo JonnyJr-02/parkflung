@@ -9,7 +9,7 @@ import { QUESTIONS_PER_GAME, TIER_INFO } from './game/tiers'
 type View =
   | { name: 'home' }
   | { name: 'settings' }
-  | { name: 'game'; id: number; questions: Question[] }
+  | { name: 'game'; id: number; questions: Question[]; timer: number }
   | { name: 'summary'; results: Result[] }
 
 export function App() {
@@ -18,11 +18,11 @@ export function App() {
   const [view, setView] = useState<View>({ name: 'home' })
 
   function play() {
-    const { seen, repeat } = getState()
+    const { seen, repeat, timerOn, timerSeconds } = getState()
     const questions = pickQuestions(bank, seen, QUESTIONS_PER_GAME, repeat)
     // With repetition off and the new questions used up, Home explains what to do.
     if (questions.length < QUESTIONS_PER_GAME) setView({ name: 'home' })
-    else setView({ name: 'game', id: Date.now(), questions })
+    else setView({ name: 'game', id: Date.now(), questions, timer: timerOn ? timerSeconds : 0 })
   }
 
   function finish(results: Result[]) {
@@ -41,7 +41,13 @@ export function App() {
       return <Settings bank={bank} onBack={() => setView({ name: 'home' })} />
     case 'game':
       return (
-        <Game key={view.id} questions={view.questions} onFinish={finish} onQuit={() => setView({ name: 'home' })} />
+        <Game
+          key={view.id}
+          questions={view.questions}
+          timer={view.timer}
+          onFinish={finish}
+          onQuit={() => setView({ name: 'home' })}
+        />
       )
     case 'summary':
       return <Summary results={view.results} onAgain={play} onHome={() => setView({ name: 'home' })} />

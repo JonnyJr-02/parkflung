@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { RawQuestion } from './parse'
+import { DEFAULT_TIMER, isTimerSeconds, type TimerSeconds } from './timer'
 import type { Outcome } from './tiers'
 
 export interface GameRecord {
@@ -17,11 +18,15 @@ export interface SavedState {
   custom: RawQuestion[]
   /** When false, a question already played never comes back. */
   repeat: boolean
+  /** A countdown on every question; running out counts as a miss. */
+  timerOn: boolean
+  /** Seconds for each question, kept when the timer is switched off. */
+  timerSeconds: TimerSeconds
 }
 
 const KEY = 'parkflung:v1'
 const MAX_GAMES = 1000
-const EMPTY: SavedState = { seen: {}, games: [], custom: [], repeat: true }
+const EMPTY: SavedState = { seen: {}, games: [], custom: [], repeat: true, timerOn: false, timerSeconds: DEFAULT_TIMER }
 
 function read(): SavedState {
   try {
@@ -33,6 +38,8 @@ function read(): SavedState {
       games: Array.isArray(data.games) ? data.games : [],
       custom: Array.isArray(data.custom) ? data.custom : [],
       repeat: data.repeat !== false,
+      timerOn: data.timerOn === true,
+      timerSeconds: isTimerSeconds(data.timerSeconds) ? data.timerSeconds : DEFAULT_TIMER,
     }
   } catch {
     return EMPTY

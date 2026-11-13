@@ -217,3 +217,28 @@ describe('gaussian tiers', () => {
     expect(cut.t).toEqual(['a19'])
   })
 })
+
+describe('timer', () => {
+  it('turns from green to yellow, orange and red as time runs out', async () => {
+    const { timerLevel } = await import('./timer')
+    expect([60, 31, 30, 19, 18, 10, 9, 0].map((s) => timerLevel(s * 1000, 60_000))).toEqual([
+      'green',
+      'green',
+      'yellow',
+      'yellow',
+      'orange',
+      'orange',
+      'red',
+      'red',
+    ])
+  })
+
+  it('shows minutes and seconds, rounded up', async () => {
+    const { formatClock, timerLabel, TIMER_CHOICES } = await import('./timer')
+    expect(formatClock(300_000)).toBe('5:00')
+    expect(formatClock(59_001)).toBe('1:00')
+    expect(formatClock(4_200)).toBe('0:05')
+    expect(formatClock(0)).toBe('0:00')
+    expect(TIMER_CHOICES.map(timerLabel)).toEqual(['30 s', '1 min', '2 min', '5 min'])
+  })
+})

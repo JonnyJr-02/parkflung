@@ -1776,3 +1776,107 @@ button {
   background: var(--primary);
   color: #ffffff;
 }
+
+.segmented.four {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* ---------- Timer ---------- */
+
+/* Pinned to the top-right corner of the game column, above every overlay, so it is always in sight. */
+.timer {
+  --timer-bg: #2f9e44;
+  --timer-ink: #ffffff;
+  position: fixed;
+  z-index: 70;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: max(12px, calc((100vw - 520px) / 2 + 12px));
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border: 2px solid var(--edge);
+  border-radius: 50%;
+  background: var(--timer-bg);
+  color: var(--timer-ink);
+  box-shadow: 0 3px 0 var(--edge);
+  transition:
+    background-color 400ms ease,
+    color 400ms ease,
+    opacity 200ms ease;
+  pointer-events: none;
+}
+
+.timer svg {
+  position: absolute;
+  inset: 2px;
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+  transform: rotate(-90deg);
+}
+
+.timer-track,
+.timer-ring {
+  fill: none;
+  stroke-width: 3.5;
+}
+
+.timer-track {
+  stroke: rgb(0 0 0 / 0.14);
+}
+
+.timer-ring {
+  stroke: currentColor;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 200ms linear;
+}
+
+.timer-text {
+  position: relative;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.timer.yellow {
+  --timer-bg: #f2c230;
+  --timer-ink: #1d2a44;
+}
+
+.timer.orange {
+  --timer-bg: #f08c00;
+  --timer-ink: #1d2a44;
+}
+
+.timer.red {
+  --timer-bg: #e03131;
+  --timer-ink: #ffffff;
+  animation: timer-beat 1s ease-in-out infinite;
+}
+
+.timer.paused {
+  animation: none;
+  opacity: 0.75;
+}
+
+@keyframes timer-beat {
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timer.red {
+    animation: none;
+  }
+}
+
+/* Room for the timer in the corner. */
+.game.has-timer .game-top {
+  padding-right: 58px;
+}
+
+.game.has-timer .walk-top {
+  right: 74px;
+}

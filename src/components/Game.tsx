@@ -5,6 +5,7 @@ import { markSeen } from '../game/store'
 import { MAX_SCORE, STOPS, TIER_INFO, type Outcome } from '../game/tiers'
 import { Farflung } from './Farflung'
 import { RarityMeter } from './RarityMeter'
+import { Timer } from './Timer'
 import { WalkOverlay } from './WalkOverlay'
 
 export interface Result {
@@ -14,6 +15,8 @@ export interface Result {
   outcome: Outcome
   /** The listed answer that was matched, when there is one. */
   answer?: Answer
+  /** The timer ran out before an answer was sent: it counts as a miss. */
+  timedOut?: boolean
 }
 
 type Phase =
@@ -58,10 +61,13 @@ function Prompt({ text }: { text: string }) {
 
 export function Game({
   questions,
+  timer,
   onFinish,
   onQuit,
 }: {
   questions: Question[]
+  /** Seconds for each question, 0 for no timer. */
+  timer: number
   onFinish: (results: Result[]) => void
   onQuit: () => void
 }) {
@@ -86,6 +92,14 @@ export function Game({
     markSeen([question.id])
     inputRef.current?.blur()
     setPhase({ kind: 'suspense', result: { question, typed: typed.trim(), outcome, answer } })
+  }
+
+  /** Time is up on this question: whatever was typed, it is a miss. */
+  function timeUp() {
+    if (phase.kind !== 'ask' && phase.kind !== 'confirm') return
+    markSeen([question.id])
+    inputRef.current?.blur()
+    setPhase({ kind: 'suspense', result: { question, typed: '', outcome: 'miss', timedOut: true } })
   }
 
   function commit(result: Result) {
@@ -115,7 +129,8 @@ export function Game({
   const answering = phase.kind === 'ask' || phase.kind === 'confirm'
 
   return (
-    <main className="screen game">
+    <main className={timer > 0 ? 'screen game has-timer' : 'screen game'}>
+      {timer > 0 && <Timer key={index} seconds={timer} running={answering} onExpire={timeUp} />}
       <header className="game-top">
         <button type="button" className="link" onClick={onQuit}>
           Esci
@@ -180,7 +195,13 @@ export function Game({
             <p className="reveal-prompt">{last.question.prompt}</p>
             <p className="reveal-label">{TIER_INFO[last.outcome].label}</p>
             <p className="reveal-answer">
-              {last.answer ? last.answer.label : last.typed ? `«${last.typed}» non è tra le risposte` : 'Hai passato'}
+              {last.timedOut
+                ? 'Tempo scaduto!'
+                : last.answer
+                  ? last.answer.label
+                  : last.typed
+                    ? `«${last.typed}» non è tra le risposte`
+                    : 'Hai passato'}
             </p>
             <p className="reveal-move">
               {TIER_INFO[last.outcome].points > 0
