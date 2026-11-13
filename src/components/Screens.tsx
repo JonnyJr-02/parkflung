@@ -4,7 +4,7 @@ import { parseUpload, type Question } from '../game/parse'
 import { summarize, update, useSavedState } from '../game/store'
 import { MAX_SCORE, OUTCOMES, QUESTIONS_PER_GAME, STOPS, stopsReached, TIER_INFO, TIERS } from '../game/tiers'
 import type { Result } from './Game'
-import { Diorama } from './Diorama'
+import { Scene } from './Scene'
 
 function GearIcon() {
   return (
@@ -32,18 +32,18 @@ export function Home({ bank, onPlay, onSettings }: { bank: Question[]; onPlay: (
 
   return (
     <main className="screen home">
-      <Diorama
+      <Scene
         className="hero"
         points={0}
-        label="Un'isola con un sentiero di caselle: parte da un carro di legno e arriva a una casa gialla sul mare"
+        label="Un manifesto della riviera: un sentiero parte da un carro di legno e arriva a una casa gialla sul mare"
       >
         <button type="button" className="icon-button hero-settings" onClick={onSettings} aria-label="Impostazioni">
           <GearIcon />
         </button>
-      </Diorama>
+      </Scene>
       <div className="home-body">
         <h1 className="title">
-          Park<span>Flung</span>
+          Park<em>Flung</em>
         </h1>
         <p className="lede">Cinque domande. Più la tua risposta è rara, più strada fai verso la casa gialla sul mare.</p>
         <dl className="stats">
@@ -94,10 +94,10 @@ export function Summary({ results, onAgain, onHome }: { results: Result[]; onAga
 
   return (
     <main className="screen summary">
-      <Diorama
-        className="hero"
+      <Scene
+        className="hero hero-tall"
         points={walked}
-        msPerTile={150}
+        msPer100={650}
         label={`L'omino è arrivato a ${score} punti su ${MAX_SCORE}`}
       />
       <div className="home-body">

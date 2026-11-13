@@ -2,10 +2,10 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 
 import { matchAnswer, type Answer } from '../game/match'
 import type { Question } from '../game/parse'
 import { markSeen } from '../game/store'
-import { MAX_SCORE, TIER_INFO, type Outcome } from '../game/tiers'
-import { Diorama } from './Diorama'
+import { MAX_SCORE, STOPS, TIER_INFO, type Outcome } from '../game/tiers'
 import { Farflung } from './Farflung'
-import { RarityMeter } from './RarityMeter'
+import { SlotReveal } from './SlotReveal'
+import { WalkOverlay } from './WalkOverlay'
 
 export interface Result {
   question: Question
@@ -19,11 +19,28 @@ export interface Result {
 type Phase =
   | { kind: 'ask' }
   | { kind: 'confirm'; answer: Answer }
-  /** The rarity meter is climbing; the result is not counted yet. */
+  /** The slot machine is spinning; the result is not counted yet. */
   | { kind: 'suspense'; result: Result }
   /** Full-screen gold for the rarest tier, before the walker moves. */
   | { kind: 'celebrate'; result: Result }
+  /** Full-screen walk to the new score. */
+  | { kind: 'walk'; from: number; outcome: Outcome }
   | { kind: 'reveal' }
+
+/** A thin trail along the top: where the walker is, and the four stops. */
+function Track({ score }: { score: number }) {
+  return (
+    <div className="track" aria-hidden="true">
+      <span className="track-line" />
+      <span className="track-fill" style={{ transform: `scaleX(${score / MAX_SCORE})` }} />
+      {STOPS.map((stop) => (
+        <span key={stop} className={score >= stop ? 'track-stop reached' : 'track-stop'} style={{ left: `${(stop / MAX_SCORE) * 100}%` }} />
+      ))}
+      <span className="track-walker" style={{ left: `${(score / MAX_SCORE) * 100}%` }} />
+      <span className="track-house" />
+    </div>
+  )
+}
 
 /** The question, word by word: each word rises in with a short stagger. */
 function Prompt({ text }: { text: string }) {
@@ -54,7 +71,7 @@ export function Game({
   const inputRef = useRef<HTMLInputElement>(null)
   const nextRef = useRef<HTMLButtonElement>(null)
 
-  const index = phase.kind === 'reveal' ? results.length - 1 : results.length
+  const index = phase.kind === 'reveal' || phase.kind === 'walk' ? results.length - 1 : results.length
   const question = questions[index]!
   const score = results.reduce((sum, result) => sum + TIER_INFO[result.outcome].points, 0)
   const last = results[results.length - 1]
@@ -73,7 +90,8 @@ export function Game({
 
   function commit(result: Result) {
     setResults((current) => [...current, result])
-    setPhase({ kind: 'reveal' })
+    // Every answer that scores ends with the walker crossing the trail, full screen.
+    setPhase(TIER_INFO[result.outcome].points > 0 ? { kind: 'walk', from: score, outcome: result.outcome } : { kind: 'reveal' })
   }
 
   function submit(event: FormEvent) {
@@ -111,7 +129,7 @@ export function Game({
         </p>
       </header>
 
-      <Diorama className="game-scene" points={score} showGain label={`L'omino è a ${score} punti su ${MAX_SCORE}`} />
+      <Track score={score} />
 
       <div className="game-body">
         {answering && (
@@ -147,7 +165,7 @@ export function Game({
         )}
 
         {phase.kind === 'suspense' && (
-          <RarityMeter
+          <SlotReveal
             key={question.id}
             outcome={phase.result.outcome}
             typed={phase.result.answer?.label ?? phase.result.typed}
@@ -166,8 +184,8 @@ export function Game({
             </p>
             <p className="reveal-move">
               {TIER_INFO[last.outcome].points > 0
-                ? `+${TIER_INFO[last.outcome].points} punti: l'omino avanza sul sentiero`
-                : "L'omino resta fermo"}
+                ? `+${TIER_INFO[last.outcome].points} punti · sei a ${score} su ${MAX_SCORE}`
+                : "Nessun passo avanti: l'omino resta fermo"}
             </p>
             <button ref={nextRef} type="button" className="btn" onClick={next}>
               {isLastQuestion ? 'Guarda dove sei arrivato' : 'Prossima domanda'}
@@ -194,6 +212,10 @@ export function Game({
       )}
 
       {phase.kind === 'celebrate' && <Farflung answer={phase.result.answer?.label ?? ''} onDone={() => commit(phase.result)} />}
+
+      {phase.kind === 'walk' && (
+        <WalkOverlay from={phase.from} to={score} outcome={phase.outcome} onDone={() => setPhase({ kind: 'reveal' })} />
+      )}
     </main>
   )
 }
