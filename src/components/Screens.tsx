@@ -36,7 +36,7 @@ export function Home({ bank, onPlay, onSettings }: { bank: Question[]; onPlay: (
       <Scene
         className="hero"
         points={0}
-        label="Un manifesto della riviera: un sentiero parte da un carro di legno e arriva a una casa gialla sul mare"
+        label="Un manifesto della riviera: un sentiero parte da un carro di legno e arriva alla casa di Ale a Varigotti, sul mare"
       >
         <button type="button" className="icon-button hero-settings" onClick={onSettings} aria-label="Impostazioni">
           <GearIcon />
@@ -78,9 +78,9 @@ export function Home({ bank, onPlay, onSettings }: { bank: Question[]; onPlay: (
 
 function destination(score: number): string {
   const reached = stopsReached(score)
-  if (score >= MAX_SCORE) return 'Sei arrivato alla casa gialla sul mare!'
+  if (score >= MAX_SCORE) return 'Sei arrivato alla casa di Ale a Varigotti!'
   if (reached === 0) return 'Sei rimasto vicino al carro.'
-  if (reached === STOPS.length) return 'Ultima tappa superata: la casa gialla era a un passo.'
+  if (reached === STOPS.length) return 'Ultima tappa superata: la casa di Ale a Varigotti era a un passo.'
   return `Hai superato la tappa ${reached} di ${STOPS.length}.`
 }
 

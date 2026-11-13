@@ -1,7 +1,7 @@
 # ParkFlung
 
 Cinque domande a partita: più la tua risposta è rara, più strada fai lungo il sentiero,
-dal carro di legno fino alla casa gialla sul mare. App per telefono (PWA), in italiano.
+dal carro di legno fino alla casa di Ale a Varigotti. App per telefono (PWA), in italiano.
 
 - **Fasce di rarità:** morto di CACCA ADDOSSO ! (0), bada che storia (10), parata col petto (25),
   Shave like a Bomber! (50), Jonny 🍆 (75), Marco B. (100).

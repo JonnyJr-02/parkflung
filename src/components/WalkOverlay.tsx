@@ -15,7 +15,7 @@ export function WalkOverlay({ from, to, outcome, onDone }: { from: number; to: n
   const passed = STOPS.filter((stop) => from < stop && to >= stop)
   const milestone =
     to >= MAX_SCORE && from < MAX_SCORE
-      ? 'Sei arrivato alla casa gialla!'
+      ? 'Sei arrivato alla casa di Ale a Varigotti!'
       : passed.length > 0
         ? `Tappa ${STOPS.indexOf(passed[passed.length - 1]!) + 1} superata!`
         : null
