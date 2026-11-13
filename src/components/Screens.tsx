@@ -5,7 +5,6 @@ import { TIMER_CHOICES, timerLabel } from '../game/timer'
 import { summarize, update, useSavedState } from '../game/store'
 import { MAX_SCORE, OUTCOMES, QUESTIONS_PER_GAME, STOPS, stopsReached, TIER_INFO, TIERS } from '../game/tiers'
 import type { Result } from './Game'
-import { useThemePref, type ThemePref } from '../theme'
 import { Scene } from './Scene'
 
 function GearIcon() {
@@ -199,19 +198,12 @@ const EXAMPLE = {
   ],
 }
 
-const THEMES: Array<[ThemePref, string]> = [
-  ['auto', 'Automatico'],
-  ['light', 'Chiaro'],
-  ['dark', 'Scuro'],
-]
-
 export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => void }) {
   const saved = useSavedState()
   const fileRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState<{ text: string; problems: string[] } | null>(null)
   const [confirming, setConfirming] = useState<'reset' | 'remove' | null>(null)
   const played = bank.length - countFresh(bank, saved.seen)
-  const [theme, setTheme] = useThemePref()
 
   async function onFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -262,31 +254,6 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
         <p className="game-count">Impostazioni</p>
         <span />
       </header>
-
-      <section className="panel">
-        <h2>Aspetto</h2>
-        <div className="segmented" role="radiogroup" aria-label="Tema">
-          {THEMES.map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              role="radio"
-              aria-checked={theme === value}
-              className={theme === value ? 'on' : ''}
-              onClick={() => setTheme(value)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <p className="note">
-          {theme === 'auto'
-            ? 'Segue il tema del telefono: chiaro di giorno, scuro quando il telefono è in modalità scura.'
-            : theme === 'light'
-              ? 'Sempre chiaro: il manifesto al tramonto.'
-              : 'Sempre scuro: il manifesto di notte.'}
-        </p>
-      </section>
 
       <section className="panel">
         <h2>Timer</h2>

@@ -5,7 +5,7 @@ dal carro di legno fino alla casa di Ale a Varigotti. App per telefono (PWA), in
 
 - **Fasce di rarità:** morto di CACCA ADDOSSO ! (0), bada che storia (10), parata col petto (25),
   Shave like a Bomber! (50), Jonny 🍆 (75), Marco B. (100).
-- **Domande:** circa 700, di ogni genere, in ordine casuale diverso per ogni telefono. Escono prima
+- **Domande:** circa 1000, di ogni genere, in ordine casuale diverso per ogni telefono. Escono prima
   quelle mai giocate e mai due della stessa famiglia nella stessa partita (per esempio due «Una città
   del…»); in Impostazioni si può scegliere se, finite quelle, devono ricapitare.
 - **Rarità a mezza campana:** le risposte di ogni domanda, dalla più comune alla più rara, sono
@@ -14,6 +14,10 @@ dal carro di legno fino alla casa di Ale a Varigotti. App per telefono (PWA), in
 - **Timer (facoltativo):** in Impostazioni si accende un timer per ogni domanda, da 30 s, 1, 2 o 5 minuti.
   Sta nell'angolo in alto a destra, passa da verde a giallo, arancione e rosso; se finisce, quella
   domanda vale «morto di CACCA ADDOSSO !».
+- **Fine partita:** un'animazione a schermo intero che cresce con le tappe raggiunte: pioggia al carro,
+  poi coriandoli, palloncini, fuochi d'artificio e, a 500 punti, la festa alla casa di Ale a Varigotti.
+  In sviluppo `?finale=430` la mostra subito con quel punteggio.
+- **Solo tema chiaro**, anche quando il telefono è in modalità scura.
 - **Nuove domande:** Impostazioni → «Carica domande da file» (JSON o testo, c'è un file di esempio).
 
 ## Formato delle domande

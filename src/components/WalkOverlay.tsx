@@ -39,7 +39,7 @@ export function WalkOverlay({ from, to, outcome, onDone }: { from: number; to: n
 
   return (
     <div className="walk" role="dialog" aria-modal="true" aria-label={`L'omino cammina fino a ${to} punti`} onClick={finish}>
-      <Scene className="walk-scene" points={points} camera msPer100={1300} label={`Il sentiero: ${to} punti su ${MAX_SCORE}`} onArrive={() => setArrived(true)} />
+      <Scene className="walk-scene" points={points} camera msPer100={3000} label={`Il sentiero: ${to} punti su ${MAX_SCORE}`} onArrive={() => setArrived(true)} />
       <div className={`walk-top tier-${outcome}`}>
         <span className="chip">{TIER_INFO[outcome].label}</span>
         <span className="walk-gain">+{to - from}</span>

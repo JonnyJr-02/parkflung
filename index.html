@@ -9,25 +9,12 @@
     <title>ParkFlung</title>
     <meta name="description" content="Cinque domande: più la risposta è rara, più avanzi lungo il sentiero." />
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6ecd8" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141c30" />
+    <meta name="color-scheme" content="light only" />
+    <meta name="theme-color" content="#f6ecd8" />
     <meta name="apple-mobile-web-app-title" content="ParkFlung" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
-    <script>
-      // Apply the theme chosen in Impostazioni before the first paint (see src/theme.ts).
-      (function () {
-        try {
-          var pref = localStorage.getItem('parkflung:theme');
-          if (pref !== 'light' && pref !== 'dark') return;
-          document.documentElement.dataset.theme = pref;
-          var bar = pref === 'dark' ? '#141c30' : '#f6ecd8';
-          document.querySelectorAll('meta[name="theme-color"]').forEach(function (meta) { meta.content = bar; });
-        } catch (error) {}
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>

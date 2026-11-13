@@ -68,101 +68,9 @@
 
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.11 0 0 0 0 0.16 0 0 0 0 0.27 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 
-  color-scheme: light dark;
-}
-
-/* Dark tokens: automatic with the phone's setting, or forced from Impostazioni (src/theme.ts). */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg: #141c30;
-    --surface: #1d2742;
-    --ink: #f3e9d4;
-    --edge: #05080f;
-    --muted: #b4b9c9;
-    --line: #34405f;
-    --primary: #f07a5c;
-    --primary-edge: #05080f;
-    --teal: #5cc2c7;
-    --danger: #ff6b5e;
-    --danger-edge: #05080f;
-
-    --tier-miss: #c98d55;
-    --tier-c: #a9b3bf;
-    --tier-n: #5fd083;
-    --tier-r: #ff6b62;
-    --tier-e: #c08cff;
-    --tier-t: #f2c230;
-
-    --p-sky-1: #0f1730;
-    --p-sky-2: #23315a;
-    --p-sky-3: #4a4f78;
-    --p-sun: #f3e6c4;
-    --p-sea: #123f4a;
-    --p-shine: #f3e6c4;
-    --p-wave: #2f6f74;
-    --p-head: #4d6233;
-    --p-wall: #d9a93e;
-    --p-window: #ffd86b;
-    --p-hill-1: #43572b;
-    --p-hill-2: #364a22;
-    --p-hill-3: #2a3b1a;
-    --p-hill-4: #213016;
-    --p-trail: #cdbd98;
-    --p-dash: #a99a74;
-    --p-palm: #141d14;
-    --p-stars: 0.85;
-    --p-grain: 0.22;
-  }
-}
-
-:root[data-theme='dark'] {
-  --bg: #141c30;
-  --surface: #1d2742;
-  --ink: #f3e9d4;
-  --edge: #05080f;
-  --muted: #b4b9c9;
-  --line: #34405f;
-  --primary: #f07a5c;
-  --primary-edge: #05080f;
-  --teal: #5cc2c7;
-  --danger: #ff6b5e;
-  --danger-edge: #05080f;
-
-  --tier-miss: #c98d55;
-  --tier-c: #a9b3bf;
-  --tier-n: #5fd083;
-  --tier-r: #ff6b62;
-  --tier-e: #c08cff;
-  --tier-t: #f2c230;
-
-  --p-sky-1: #0f1730;
-  --p-sky-2: #23315a;
-  --p-sky-3: #4a4f78;
-  --p-sun: #f3e6c4;
-  --p-sea: #123f4a;
-  --p-shine: #f3e6c4;
-  --p-wave: #2f6f74;
-  --p-head: #4d6233;
-  --p-wall: #d9a93e;
-  --p-window: #ffd86b;
-  --p-hill-1: #43572b;
-  --p-hill-2: #364a22;
-  --p-hill-3: #2a3b1a;
-  --p-hill-4: #213016;
-  --p-trail: #cdbd98;
-  --p-dash: #a99a74;
-  --p-palm: #141d14;
-  --p-stars: 0.85;
-  --p-grain: 0.22;
-}
-
-:root[data-theme='light'] {
   color-scheme: light;
 }
 
-:root[data-theme='dark'] {
-  color-scheme: dark;
-}
 
 
 *,
@@ -375,8 +283,8 @@ button {
   to { transform: rotate(5deg); }
 }
 
-.walking .p-leg-a { animation: step 260ms ease-in-out infinite alternate; }
-.walking .p-leg-b { animation: step 260ms ease-in-out infinite alternate-reverse; }
+.walking .p-leg-a { animation: step 420ms ease-in-out infinite alternate; }
+.walking .p-leg-b { animation: step 420ms ease-in-out infinite alternate-reverse; }
 
 @keyframes step {
   from { transform: rotate(-20deg); }
@@ -1879,4 +1787,276 @@ button {
 
 .game.has-timer .walk-top {
   right: 74px;
+}
+
+/* ---------- Finale: the full-screen ending, bigger the more stops were reached ---------- */
+
+.finale {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 20px calc(100px + env(safe-area-inset-bottom, 0px));
+  color: #1d2a44;
+  text-align: center;
+  animation: fade-in 320ms ease;
+}
+
+.finale.level-0 { background: linear-gradient(180deg, #8f9bab 0%, #c9c8c0 55%, #e6dcc6 100%); }
+.finale.level-1 { background: linear-gradient(180deg, #fbd1a2 0%, #f6ecd8 100%); }
+.finale.level-2 { background: linear-gradient(180deg, #f7a072 0%, #fbd1a2 60%, #f6ecd8 100%); }
+.finale.level-3 { background: linear-gradient(180deg, #f4845f 0%, #f7a072 45%, #fde4a5 100%); }
+.finale.level-4 { background: linear-gradient(180deg, #1d2a44 0%, #c8553d 55%, #e9b13a 100%); color: #fff8ea; }
+.finale.level-5 {
+  background: linear-gradient(180deg, #0f1730 0%, #4a2a6b 38%, #c8553d 72%, #f2c230 100%);
+  color: #fff8ea;
+}
+
+.finale-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.finale-rays {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  width: 220vmax;
+  height: 220vmax;
+  margin: -110vmax 0 0 -110vmax;
+  background: repeating-conic-gradient(rgb(255 255 255 / 0.22) 0deg 8deg, transparent 8deg 16deg);
+  animation: spin 30s linear infinite;
+}
+
+.finale.level-4 .finale-rays {
+  background: repeating-conic-gradient(rgb(255 243 176 / 0.16) 0deg 8deg, transparent 8deg 16deg);
+}
+
+.finale.level-5 .finale-rays {
+  background: repeating-conic-gradient(rgb(242 194 48 / 0.28) 0deg 7deg, transparent 7deg 14deg);
+  animation-duration: 14s;
+}
+
+.finale-cloud {
+  position: absolute;
+  top: calc(40px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  width: 180px;
+  margin-left: -90px;
+  fill: #6c7584;
+  animation: cloud-drift 4s ease-in-out infinite alternate;
+}
+
+@keyframes cloud-drift {
+  from { transform: translateX(-16px); }
+  to { transform: translateX(16px); }
+}
+
+.finale-center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 440px;
+}
+
+.finale-kicker {
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.8;
+  animation: drop-in 420ms var(--ease-out) both;
+}
+
+.finale-score {
+  font-family: var(--serif);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  animation: pop 480ms var(--ease-out) 120ms both;
+}
+
+.finale-score strong {
+  font-weight: 400;
+  font-size: clamp(4.5rem, 24vw, 7rem);
+}
+
+.finale-score small {
+  font-size: 1.4rem;
+  opacity: 0.75;
+}
+
+.finale.level-5 .finale-score strong {
+  color: #fff3b0;
+  text-shadow: 0 4px 0 #b57e00, 0 0 28px rgb(242 194 48 / 0.6);
+}
+
+.finale-stops {
+  display: flex;
+  gap: 8px;
+  margin: 4px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.finale-stops li {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 2px solid #1d2a44;
+  border-radius: 50%;
+  background: #fff8ea;
+  color: #1d2a44;
+  font-weight: 700;
+  font-size: 0.8rem;
+  box-shadow: 0 3px 0 #1d2a44;
+  opacity: 0.55;
+  animation: pop 360ms var(--ease-out) calc(500ms + var(--i) * 260ms) both;
+}
+
+.finale-stops li.reached {
+  background: #e8664a;
+  color: #ffffff;
+  opacity: 1;
+}
+
+.finale-stops li.house {
+  font-size: 1.3rem;
+}
+
+.finale-stops li.reached.house {
+  background: #f2c230;
+  color: #1d2a44;
+  box-shadow: 0 3px 0 #1d2a44, 0 0 18px rgb(242 194 48 / 0.9);
+}
+
+.finale-title {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2rem, 9vw, 2.8rem);
+  line-height: 1.05;
+}
+
+.finale-title span {
+  display: inline-block;
+  animation: drop-in 520ms var(--ease-out) calc(900ms + var(--i) * 120ms) both;
+}
+
+.finale.level-5 .finale-title {
+  color: #fff3b0;
+  text-shadow: 0 3px 0 #1d2a44;
+}
+
+.finale-note {
+  max-width: 30ch;
+  font-size: 1.05rem;
+  opacity: 0.9;
+  animation: fade-in 600ms ease 1.4s both;
+}
+
+.finale-button {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  max-width: 480px;
+  min-height: 56px;
+  margin: 0 auto;
+  border: 2px solid #1d2a44;
+  border-radius: var(--radius-m);
+  background: #fff8ea;
+  color: #1d2a44;
+  font-weight: 700;
+  font-size: 1.1rem;
+  box-shadow: 0 5px 0 #1d2a44;
+  opacity: 0;
+  transform: translateY(16px);
+  pointer-events: none;
+  transition:
+    opacity 300ms ease,
+    transform 300ms var(--ease-out);
+}
+
+.finale-button.show {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.finale-button.show:active {
+  transform: translateY(2px);
+}
+
+/* The house of Ale: lit windows, a door that swings open, hearts from the doorway. */
+.finale-house {
+  width: min(78vw, 300px);
+  margin-bottom: 4px;
+  overflow: visible;
+  animation: pop 700ms var(--ease-out) both;
+}
+
+.finale-house-sun {
+  fill: #fde4a5;
+  animation: sun-glow 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes sun-glow {
+  to { fill: #fff3b0; }
+}
+
+.finale-house-window {
+  fill: #ffd86b;
+  animation: window-glow 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes window-glow {
+  to { fill: #fff3b0; }
+}
+
+.finale-house-doorway {
+  fill: #1d2a44;
+}
+
+.finale-house-door {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: door-open 900ms var(--ease-out) 1.2s both;
+}
+
+@keyframes door-open {
+  to { transform: scaleX(0.25); }
+}
+
+.finale-house-walker .p-frond {
+  animation: wave 600ms ease-in-out infinite alternate;
+}
+
+@keyframes wave {
+  from { transform: rotate(-14deg); }
+  to { transform: rotate(16deg); }
+}
+
+.finale-hearts path {
+  fill: #e8664a;
+  stroke: #1d2a44;
+  stroke-width: 1.2;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: heart-rise 2.4s ease-out calc(2s + var(--i) * 0.8s) infinite;
+}
+
+@keyframes heart-rise {
+  0% { opacity: 0; transform: translateY(0) scale(0.6); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-70px) scale(1.2); }
 }

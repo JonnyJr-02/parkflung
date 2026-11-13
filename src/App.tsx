@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Finale } from './components/Finale'
 import { Game, type Result } from './components/Game'
 import { Home, Settings, Summary } from './components/Screens'
 import { mergeBank, pickQuestions } from './game/bank'
@@ -10,12 +11,29 @@ type View =
   | { name: 'home' }
   | { name: 'settings' }
   | { name: 'game'; id: number; questions: Question[]; timer: number }
+  /** The full-screen ending, then the summary. */
+  | { name: 'finale'; results: Result[] }
   | { name: 'summary'; results: Result[] }
+
+/** In development, `?finale=430` opens the ending with that score, to try every version of it. */
+function firstView(): View {
+  if (!import.meta.env.DEV) return { name: 'home' }
+  const points = new URLSearchParams(location.search).get('finale')
+  if (points === null) return { name: 'home' }
+  const outcomes = Array.from({ length: 5 }, (_, i): Result['outcome'] => {
+    const left = Number(points) - i * 100
+    return left >= 100 ? 't' : left >= 75 ? 'e' : left >= 50 ? 'r' : left >= 25 ? 'n' : left >= 10 ? 'c' : 'miss'
+  })
+  return {
+    name: 'finale',
+    results: outcomes.map((outcome, i) => ({ question: { id: `prova-${i}`, prompt: `Domanda di prova ${i + 1}`, answers: [] }, typed: '', outcome })),
+  }
+}
 
 export function App() {
   const saved = useSavedState()
   const bank = useMemo(() => mergeBank(saved.custom), [saved.custom])
-  const [view, setView] = useState<View>({ name: 'home' })
+  const [view, setView] = useState<View>(firstView)
 
   function play() {
     const { seen, repeat, timerOn, timerSeconds } = getState()
@@ -31,7 +49,7 @@ export function App() {
       score: results.reduce((sum, result) => sum + TIER_INFO[result.outcome].points, 0),
       outcomes: results.map((result) => result.outcome),
     })
-    setView({ name: 'summary', results })
+    setView({ name: 'finale', results })
   }
 
   switch (view.name) {
@@ -47,6 +65,13 @@ export function App() {
           timer={view.timer}
           onFinish={finish}
           onQuit={() => setView({ name: 'home' })}
+        />
+      )
+    case 'finale':
+      return (
+        <Finale
+          score={view.results.reduce((sum, result) => sum + TIER_INFO[result.outcome].points, 0)}
+          onDone={() => setView({ name: 'summary', results: view.results })}
         />
       )
     case 'summary':

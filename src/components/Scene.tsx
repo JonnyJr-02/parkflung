@@ -49,7 +49,7 @@ const FROND = (() => {
   return { leaflets, rib: `M${P0[0]} ${P0[1] + 10} L${P0[0]} ${P0[1]} Q ${C[0]} ${C[1]} ${P2[0]} ${P2[1]}` }
 })()
 
-function Walker() {
+export function Walker() {
   return (
     <>
       <ellipse className="p-shadow" cx={0} cy={1} rx={12} ry={3} />
@@ -70,6 +70,21 @@ function Walker() {
     </>
   )
 }
+
+/**
+ * Walking pace: a short start and stop, and an even speed in between, so the walker strides
+ * along instead of rushing through the middle.
+ */
+function walkEase(t: number): number {
+  const a = 0.18
+  const v = 1 / (1 - a)
+  if (t < a) return (0.5 * v * t * t) / a
+  if (t > 1 - a) return 1 - (0.5 * v * (1 - t) * (1 - t)) / a
+  return v * (t - a / 2)
+}
+
+/** Milliseconds for one step: the legs (styles.css, .walking) swing at the same pace. */
+const STEP_MS = 420
 
 function prefersReducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -137,16 +152,17 @@ export function Scene({ points, msPer100 = 900, camera = false, label, className
       arriveRef.current?.()
       return
     }
-    const duration = Math.max(700, (Math.abs(points - from) / 100) * msPer100)
-    const steps = Math.max(2, Math.round(duration / 260))
+    // Even a short move gets a few unhurried steps.
+    const duration = Math.max(msPer100 * 0.75, (Math.abs(points - from) / 100) * msPer100)
+    const steps = Math.max(2, Math.round(duration / STEP_MS))
     const start = performance.now()
     let frame = 0
     walkerRef.current?.classList.add('walking')
     zoomTargetRef.current = 1
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / duration)
-      const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
-      place(from + (points - from) * eased, 2.2 * Math.abs(Math.sin(Math.PI * steps * t)))
+      // A soft bob, highest mid-step: sin² has no corners, so the walker does not hop.
+      place(from + (points - from) * walkEase(t), 1.8 * Math.sin(Math.PI * steps * t) ** 2)
       if (t < 1) frame = requestAnimationFrame(tick)
       else {
         walkerRef.current?.classList.remove('walking')
@@ -155,7 +171,7 @@ export function Scene({ points, msPer100 = 900, camera = false, label, className
       }
     }
     // Let the camera close in before the first step.
-    const delay = camera ? 500 : 0
+    const delay = camera ? 900 : 0
     const timer = window.setTimeout(() => (frame = requestAnimationFrame(tick)), delay)
     return () => {
       clearTimeout(timer)
@@ -170,8 +186,14 @@ export function Scene({ points, msPer100 = 900, camera = false, label, className
     let zoom = 0
     let cx = posRef.current[0]
     let cy = posRef.current[1]
+    let last = performance.now()
     const reduce = prefersReducedMotion()
-    const step = () => {
+    const step = (now: number) => {
+      // Smoothing by elapsed time, so the camera glides the same on 60 Hz and 120 Hz screens.
+      const dt = Math.min(64, now - last)
+      last = now
+      const zoomRate = reduce ? 1 : 1 - Math.exp(-dt / 260)
+      const followRate = reduce ? 1 : 1 - Math.exp(-dt / 110)
       const box = boxRef.current, svg = svgRef.current
       if (box && svg && box.clientWidth > 0) {
         const aspect = box.clientHeight / box.clientWidth
@@ -180,12 +202,12 @@ export function Scene({ points, msPer100 = 900, camera = false, label, className
           wideH = H
           wideW = H / aspect
         }
-        zoom += (zoomTargetRef.current - zoom) * (reduce ? 1 : 0.06)
+        zoom += (zoomTargetRef.current - zoom) * zoomRate
         const w = wideW + (Math.min(CLOSE_WIDTH, wideW) - wideW) * zoom
         const h = w * aspect
         const [wx, wy] = posRef.current
-        cx += (wx - cx) * (reduce ? 1 : 0.18)
-        cy += (wy - 40 - cy) * (reduce ? 1 : 0.18)
+        cx += (wx - cx) * followRate
+        cy += (wy - 40 - cy) * followRate
         const x = Math.min(W - w, Math.max(0, cx - w / 2))
         const y = Math.min(H - h, Math.max(0, cy - h / 2))
         svg.setAttribute('viewBox', `${x.toFixed(2)} ${y.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`)
@@ -205,15 +227,12 @@ export function Scene({ points, msPer100 = 900, camera = false, label, className
             <stop offset="0.6" className="p-sky-2" />
             <stop offset="1" className="p-sky-3" />
           </linearGradient>
+          {/* The sun above the sea, cut by three stripes: one clip path, cheap to repaint as the camera moves. */}
           <clipPath id="p-sunclip">
-            <rect x="0" y="0" width={W} height={168 + OFFSET} />
+            <rect x="0" y="0" width={W} height={138 + OFFSET} />
+            <rect x="0" y={142 + OFFSET} width={W} height="6" />
+            <rect x="0" y={154 + OFFSET} width={W} height="6" />
           </clipPath>
-          <mask id="p-stripes">
-            <rect width={W} height={H} fill="#fff" />
-            <rect x="0" y={138 + OFFSET} width={W} height="4" fill="#000" />
-            <rect x="0" y={148 + OFFSET} width={W} height="6" fill="#000" />
-            <rect x="0" y={160 + OFFSET} width={W} height="8" fill="#000" />
-          </mask>
         </defs>
         <rect width={W} height={240 + OFFSET} fill="url(#p-sky)" />
         <g className="p-stars">
@@ -221,7 +240,7 @@ export function Scene({ points, msPer100 = 900, camera = false, label, className
             <circle key={`${x}-${y}`} cx={x} cy={y} r={1.4} />
           ))}
         </g>
-        <g clipPath="url(#p-sunclip)" mask="url(#p-stripes)">
+        <g clipPath="url(#p-sunclip)">
           <circle className="p-sun" cx={232} cy={158 + OFFSET} r={78} />
         </g>
         <g transform={`translate(0 ${OFFSET})`}>

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { builtIn, derived, family, LETTER_GROUPS, MIN_LETTER_ANSWERS, mergeBank, mergeCustom, pickQuestions } from './bank'
 import { editDistance, matchAnswer, stem, tokenize } from './match'
 import { compile, parseJson, parseText, parseUpload, type RawQuestion } from './parse'
-import { MAX_SCORE, stopsReached, TIERS } from './tiers'
+import { MAX_SCORE, STOPS, stopsReached, TIERS } from './tiers'
 
 const fruit: RawQuestion = {
   q: 'Un frutto',
@@ -180,7 +180,7 @@ describe('built-in questions', () => {
   })
 
   it('reach the target size', () => {
-    expect(bank.length).toBeGreaterThanOrEqual(700)
+    expect(bank.length).toBeGreaterThanOrEqual(1000)
   })
 })
 
@@ -240,5 +240,14 @@ describe('timer', () => {
     expect(formatClock(4_200)).toBe('0:05')
     expect(formatClock(0)).toBe('0:00')
     expect(TIMER_CHOICES.map(timerLabel)).toEqual(['30 s', '1 min', '2 min', '5 min'])
+  })
+})
+
+describe('ending', () => {
+  it('has one version for the cart, each stop and the house', async () => {
+    const { FINALE_TEXT } = await import('../components/Finale')
+    expect(FINALE_TEXT).toHaveLength(STOPS.length + 2)
+    expect([0, 120, 260, 399, 400, 500].map(stopsReached)).toEqual([0, 1, 2, 3, 4, 5])
+    expect(FINALE_TEXT[5]!.title).toContain('casa di Ale a Varigotti')
   })
 })
