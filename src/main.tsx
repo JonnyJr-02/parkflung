@@ -1,5 +1,4 @@
-import '@fontsource-variable/bricolage-grotesque'
-import '@fontsource-variable/dm-sans'
+import '@fontsource-variable/fredoka'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'

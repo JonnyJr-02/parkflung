@@ -4,7 +4,7 @@ import { parseUpload, type Question } from '../game/parse'
 import { summarize, update, useSavedState } from '../game/store'
 import { MAX_SCORE, OUTCOMES, QUESTIONS_PER_GAME, STOPS, stopsReached, TIER_INFO, TIERS } from '../game/tiers'
 import type { Result } from './Game'
-import { TrailScene } from './TrailScene'
+import { Diorama } from './Diorama'
 
 function GearIcon() {
   return (
@@ -32,14 +32,19 @@ export function Home({ bank, onPlay, onSettings }: { bank: Question[]; onPlay: (
 
   return (
     <main className="screen home">
-      <div className="hero">
-        <TrailScene points={0} label="Un sentiero che parte da un carro di legno e arriva a una casa gialla sul mare" />
+      <Diorama
+        className="hero"
+        points={0}
+        label="Un'isola con un sentiero di caselle: parte da un carro di legno e arriva a una casa gialla sul mare"
+      >
         <button type="button" className="icon-button hero-settings" onClick={onSettings} aria-label="Impostazioni">
           <GearIcon />
         </button>
-      </div>
+      </Diorama>
       <div className="home-body">
-        <h1 className="title">ParkFlung</h1>
+        <h1 className="title">
+          Park<span>Flung</span>
+        </h1>
         <p className="lede">Cinque domande. Più la tua risposta è rara, più strada fai verso la casa gialla sul mare.</p>
         <dl className="stats">
           <div>
@@ -83,15 +88,18 @@ export function Summary({ results, onAgain, onHome }: { results: Result[]; onAga
   // Start at the cart, then walk: the scene animates whenever its points change.
   const [walked, setWalked] = useState(0)
   useEffect(() => {
-    const timer = setTimeout(() => setWalked(score), 350)
+    const timer = setTimeout(() => setWalked(score), 500)
     return () => clearTimeout(timer)
   }, [score])
 
   return (
     <main className="screen summary">
-      <div className="hero">
-        <TrailScene points={walked} label={`Il sentiero: ${score} punti su ${MAX_SCORE}`} />
-      </div>
+      <Diorama
+        className="hero"
+        points={walked}
+        msPerTile={150}
+        label={`L'omino è arrivato a ${score} punti su ${MAX_SCORE}`}
+      />
       <div className="home-body">
         <p className="total">
           <strong>{score}</strong> / {MAX_SCORE}

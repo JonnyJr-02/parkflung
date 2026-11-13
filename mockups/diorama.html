@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ParkFlung · proposta diorama</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #fff6ea; color: #26314d; font-family: 'Fredoka', sans-serif; }
+  .phone { max-width: 375px; margin: 0 auto; min-height: 812px; }
+  svg { display: block; width: 100%; height: auto; }
+  .body { padding: 4px 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+  h1 { margin: 0; font-size: 46px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+  h1 span { color: #ff7a59; }
+  .lede { margin: 0; font-size: 16px; line-height: 1.4; color: #5b6580; }
+  .card { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 22px; background: #fff; box-shadow: 0 10px 24px rgba(38, 49, 77, 0.12), 0 2px 0 rgba(38, 49, 77, 0.06); }
+  .badge { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; background: linear-gradient(160deg, #ff8b7f, #cf2e28); color: #fff; font-weight: 700; font-size: 20px; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.18); }
+  .card b { display: block; font-size: 22px; color: #cf2e28; }
+  .card small { color: #8a93a8; font-size: 13px; }
+  .btn { display: block; text-align: center; padding: 16px; border-radius: 20px; background: #ff7a59; color: #fff; font-weight: 700; font-size: 20px; box-shadow: 0 6px 0 #d4502f; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <svg viewBox="0 20 375 340" id="scene" aria-hidden="true">
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9ad8ff" /><stop offset="1" stop-color="#fff6ea" /></linearGradient>
+      <radialGradient id="head" cx="0.35" cy="0.35" r="0.7"><stop offset="0" stop-color="#ffe2c4" /><stop offset="1" stop-color="#e7a97c" /></radialGradient>
+      <linearGradient id="water" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6fd0ff" /><stop offset="1" stop-color="#2e9be0" /></linearGradient>
+    </defs>
+    <rect width="375" height="430" fill="url(#sky)" />
+    <g fill="#fff" opacity="0.9"><ellipse cx="60" cy="56" rx="34" ry="12" /><ellipse cx="80" cy="48" rx="22" ry="14" /><ellipse cx="318" cy="92" rx="30" ry="10" /><ellipse cx="300" cy="86" rx="18" ry="11" /></g>
+    <ellipse cx="187" cy="346" rx="118" ry="10" fill="rgba(38,49,77,0.12)" />
+    <g id="world"></g>
+  </svg>
+  <div class="body">
+    <h1>Park<span>Flung</span></h1>
+    <p class="lede">Cinque domande. Più la tua risposta è rara, più caselle fai verso la casa gialla.</p>
+    <div class="card"><span class="badge">+50</span><span><small>Hai detto «defibrillatore»</small><b>Shave like a Bomber!</b></span></div>
+    <span class="btn">Gioca</span>
+  </div>
+</div>
+<script>
+const NS = 'http://www.w3.org/2000/svg'
+const world = document.getElementById('world')
+const el = (tag, attrs, parent = world) => { const n = document.createElementNS(NS, tag); Object.entries(attrs).forEach(([k, v]) => n.setAttribute(k, v)); parent.appendChild(n); return n }
+const N = 7, HW = 24, HH = 12, OX = 187, OY = 104, DEPTH = 46
+const iso = (i, j, z = 0) => [OX + (i - j) * HW, OY + (i + j) * HH - z]
+const poly = (pts, fill, parent) => el('polygon', { points: pts.map((p) => p.join(',')).join(' '), fill }, parent)
+const isWater = (i, j) => i + j <= 2 || (i === 3 && j === 0) || (i === 0 && j === 3)
+const isSand = (i, j) => !isWater(i, j) && i + j <= 4 && (i === 0 || j === 0 || i + j === 3)
+
+// Island sides
+const L0 = iso(0, N), B = iso(N, N), R0 = iso(N, 0)
+poly([L0, B, [B[0], B[1] + DEPTH], [L0[0], L0[1] + DEPTH]], '#b9804d')
+poly([B, R0, [R0[0], R0[1] + DEPTH], [B[0], B[1] + DEPTH]], '#8f5e36')
+poly([L0, B, [B[0], B[1] + 8], [L0[0], L0[1] + 8]], '#5fae3e')
+poly([B, R0, [R0[0], R0[1] + 8], [B[0], B[1] + 8]], '#4b9631')
+;[[40, 18], [90, 30], [140, 22]].forEach(([d, y]) => { const t = d / 168; el('circle', { cx: L0[0] + (B[0] - L0[0]) * t, cy: L0[1] + (B[1] - L0[1]) * t + y, r: 3, fill: '#9c6a3e' }) })
+
+const path = [[6, 6], [6, 5], [6, 4], [6, 3], [6, 2], [5, 2], [4, 2], [4, 3], [4, 4], [4, 5], [3, 5], [2, 5], [2, 4], [2, 3], [2, 2]]
+const pathIndex = new Map(path.map(([i, j], k) => [`${i},${j}`, k]))
+const stopsAt = { 3: 100, 6: 200, 9: 300, 12: 400 }
+const objects = { '5,6': 'cart', '2,1': 'house', '6,5': 'walker', '0,5': 'palm', '1,6': 'palm', '5,0': 'palm', '6,0': 'palm', '3,3': 'bush', '5,4': 'bush' }
+
+function tile(i, j) {
+  const k = `${i},${j}`, onPath = pathIndex.has(k)
+  if (isWater(i, j)) {
+    const z = -6, a = iso(i, j, z), b = iso(i + 1, j, z), c = iso(i + 1, j + 1, z), d = iso(i, j + 1, z)
+    poly([a, b, c, d], 'url(#water)')
+    el('path', { d: `M${(a[0] + c[0]) / 2 - 8} ${(a[1] + c[1]) / 2} q4 -3 8 0 t8 0`, fill: 'none', stroke: '#c8efff', 'stroke-width': 1.6, 'stroke-linecap': 'round' })
+    return
+  }
+  const z = onPath ? 4 : 0
+  const a = iso(i, j, z), b = iso(i + 1, j, z), c = iso(i + 1, j + 1, z), d = iso(i, j + 1, z)
+  if (onPath) {
+    poly([d, c, [c[0], c[1] + z], [d[0], d[1] + z]], '#d9b16b')
+    poly([c, b, [b[0], b[1] + z], [c[0], c[1] + z]], '#c49a55')
+  }
+  const grass = (i + j) % 2 ? '#8fd16a' : '#86c962'
+  poly([a, b, c, d], onPath ? '#f6dca2' : isSand(i, j) ? '#f8e3b0' : grass)
+  if (onPath) el('circle', { cx: (a[0] + c[0]) / 2, cy: (a[1] + c[1]) / 2, r: 2, fill: '#e6c587' })
+}
+
+function center(i, j, z = 0) { return iso(i + 0.5, j + 0.5, z) }
+
+function palm(i, j) {
+  const [x, y] = center(i, j)
+  const g = el('g', { transform: `translate(${x} ${y})` })
+  el('ellipse', { cx: 2, cy: 2, rx: 12, ry: 5, fill: 'rgba(38,49,77,0.15)' }, g)
+  ;[0, 1, 2, 3].forEach((s) => el('rect', { x: -3 + s * 0.6, y: -12 - s * 10, width: 6, height: 11, rx: 2.5, fill: s % 2 ? '#a8713d' : '#c08548' }, g))
+  const top = [2.4, -52]
+  ;[[-26, -46], [26, -44], [-20, -64], [20, -66], [0, -72], [-30, -56], [30, -54]].forEach(([dx, dy], n) => el('path', { d: `M${top[0]} ${top[1]} Q ${(top[0] + dx) / 2} ${top[1] - 14 + (dy + 52) * 0.2} ${dx} ${dy} Q ${(top[0] + dx) / 2} ${top[1] - 4} ${top[0]} ${top[1]} Z`, fill: n % 2 ? '#3fa84a' : '#58c25c' }, g))
+  el('circle', { cx: top[0] - 3, cy: top[1] + 2, r: 3, fill: '#7a4a21' }, g); el('circle', { cx: top[0] + 3, cy: top[1] + 3, r: 3, fill: '#8a5a2b' }, g)
+}
+function bush(i, j) { const [x, y] = center(i, j); const g = el('g', { transform: `translate(${x} ${y})` }); el('ellipse', { cx: 0, cy: 2, rx: 14, ry: 5, fill: 'rgba(38,49,77,0.15)' }, g); el('circle', { cx: -6, cy: -6, r: 8, fill: '#4fae45' }, g); el('circle', { cx: 5, cy: -8, r: 9, fill: '#5fc255' }, g); el('circle', { cx: 0, cy: -2, r: 7, fill: '#48a03f' }, g); el('circle', { cx: 3, cy: -10, r: 2, fill: '#ff8fa3' }, g) }
+function box(i0, j0, i1, j1, h, left, right, top) { const A = iso(i0, j1), Bc = iso(i1, j1), C = iso(i1, j0), D = iso(i0, j0); poly([A, Bc, [Bc[0], Bc[1] - h], [A[0], A[1] - h]], left); poly([Bc, C, [C[0], C[1] - h], [Bc[0], Bc[1] - h]], right); if (top) poly([[A[0], A[1] - h], [Bc[0], Bc[1] - h], [C[0], C[1] - h], [D[0], D[1] - h]], top) }
+function house(i, j) {
+  const i0 = i + 0.1, i1 = i + 0.9, j0 = j + 0.15, j1 = j + 0.85, h = 30
+  el('ellipse', { cx: center(i, j)[0] + 4, cy: center(i, j)[1] + 4, rx: 26, ry: 10, fill: 'rgba(38,49,77,0.15)' })
+  box(i0, j0, i1, j1, h, '#ffd54a', '#f0b52a')
+  // gable roof along i
+  const ridgeA = iso(i0 - 0.05, (j0 + j1) / 2, h + 20), ridgeB = iso(i1 + 0.05, (j0 + j1) / 2, h + 20)
+  const eA1 = iso(i0 - 0.05, j1 + 0.08, h - 2), eB1 = iso(i1 + 0.05, j1 + 0.08, h - 2), eB0 = iso(i1 + 0.05, j0 - 0.08, h - 2)
+  poly([eA1, eB1, ridgeB, ridgeA], '#ff6b4a')
+  poly([eB1, eB0, ridgeB], '#d94b2f')
+  const door = [iso(i0 + 0.32, j1, 0), iso(i0 + 0.5, j1, 0), iso(i0 + 0.5, j1, 16), iso(i0 + 0.32, j1, 16)]; poly(door, '#8a4f2a')
+  const win = [iso(i0 + 0.06, j1, 13), iso(i0 + 0.22, j1, 13), iso(i0 + 0.22, j1, 22), iso(i0 + 0.06, j1, 22)]; poly(win, '#5fc0f0')
+  const win2 = [iso(i1, j0 + 0.2, 13), iso(i1, j0 + 0.4, 13), iso(i1, j0 + 0.4, 22), iso(i1, j0 + 0.2, 22)]; poly(win2, '#5fc0f0')
+}
+function cart(i, j) {
+  el('ellipse', { cx: center(i, j)[0] + 4, cy: center(i, j)[1] + 6, rx: 22, ry: 7, fill: 'rgba(38,49,77,0.15)' })
+  box(i + 0.15, j + 0.2, i + 0.85, j + 0.8, 16, '#c98a4b', '#a86d36', '#dca267')
+  ;[[i + 0.3, j + 0.8], [i + 0.72, j + 0.8]].forEach(([a, b]) => { const [x, y] = iso(a, b, 4); el('ellipse', { cx: x, cy: y, rx: 6.5, ry: 7.5, fill: '#6b4423' }); el('ellipse', { cx: x, cy: y, rx: 3.5, ry: 4.2, fill: '#e2a861' }) })
+}
+function flag(i, j, n, reached) { const [x, y] = center(i, j, 4); const g = el('g', { transform: `translate(${x + 10} ${y - 2})` }); el('rect', { x: -1, y: -30, width: 2.4, height: 30, rx: 1, fill: '#6b4423' }, g); el('path', { d: 'M1.4 -30 L22 -25 L1.4 -19 Z', fill: reached ? '#3d7bff' : '#fff' }, g); const t = el('text', { x: 0, y: -34, 'text-anchor': 'middle', 'font-family': 'Fredoka', 'font-weight': 700, 'font-size': 9, fill: '#26314d' }, g); t.textContent = n }
+function walker(i, j) {
+  const [x, y] = center(i, j, 4)
+  const g = el('g', { transform: `translate(${x} ${y}) scale(1.05)` })
+  el('ellipse', { cx: 0, cy: 1, rx: 10, ry: 4, fill: 'rgba(38,49,77,0.22)' }, g)
+  el('rect', { x: -5, y: -16, width: 4, height: 16, rx: 2, fill: '#2f3f6e' }, g); el('rect', { x: 1, y: -16, width: 4, height: 16, rx: 2, fill: '#26345c' }, g)
+  el('rect', { x: -8, y: -36, width: 16, height: 22, rx: 7, fill: '#ff7a59' }, g)
+  el('rect', { x: -8, y: -24, width: 16, height: 4, fill: '#ffd54a' }, g)
+  // Frond
+  const P0 = [8, -28], C = [26, -76], P2 = [-14, -84]
+  const pt = (t) => [(1 - t) ** 2 * P0[0] + 2 * (1 - t) * t * C[0] + t * t * P2[0], (1 - t) ** 2 * P0[1] + 2 * (1 - t) * t * C[1] + t * t * P2[1]]
+  for (let t = 0.2; t <= 1; t += 0.045) { const [x0, y0] = pt(t), [x1, y1] = pt(Math.min(1, t + 0.01)); const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len, L = 15 * (1 - t * 0.5); [1, -1].forEach((side) => el('path', { d: `M${x0} ${y0} Q ${x0 + nx * side * L * 0.6 + dx / len * 3} ${y0 + ny * side * L * 0.6 + dy / len * 3} ${x0 + nx * side * L + dx / len * 6} ${y0 + ny * side * L + dy / len * 6}`, fill: 'none', stroke: side > 0 ? '#3fa84a' : '#58c25c', 'stroke-width': 3.4, 'stroke-linecap': 'round' }, g)) }
+  el('path', { d: `M${P0[0]} ${P0[1] + 12} L${P0[0]} ${P0[1]} Q ${C[0]} ${C[1]} ${P2[0]} ${P2[1]}`, fill: 'none', stroke: '#9a6b2f', 'stroke-width': 2.6, 'stroke-linecap': 'round' }, g)
+  el('path', { d: 'M-6 -32 Q 0 -24 8 -22 M5 -33 Q 8 -30 8 -27', fill: 'none', stroke: '#f2b58a', 'stroke-width': 4.5, 'stroke-linecap': 'round' }, g)
+  el('circle', { cx: 0, cy: -45, r: 9, fill: 'url(#head)' }, g)
+  el('path', { d: 'M-9 -47 Q -8 -56 0 -55 Q 9 -55 9 -47 Q 3 -51 -9 -47 Z', fill: '#4a3222' }, g)
+  el('circle', { cx: 4, cy: -45, r: 1.3, fill: '#26314d' }, g)
+}
+
+const cells = []
+for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) cells.push([i, j])
+cells.sort((a, b) => a[0] + a[1] - (b[0] + b[1]) || a[0] - b[0])
+cells.forEach(([i, j]) => tile(i, j))
+cells.forEach(([i, j]) => {
+  const k = `${i},${j}`, idx = pathIndex.get(k)
+  if (idx !== undefined && stopsAt[idx]) flag(i, j, stopsAt[idx], stopsAt[idx] <= 100)
+  const o = objects[k]
+  if (o === 'palm') palm(i, j); if (o === 'bush') bush(i, j); if (o === 'house') house(i, j); if (o === 'cart') cart(i, j); if (o === 'walker') walker(i, j)
+})
+</script>
+</body>
+</html>

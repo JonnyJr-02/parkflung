@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ParkFlung · proposta pixel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+<style>
+  :root { --c0: #0f380f; --c1: #306230; --c2: #8bac0f; --c3: #9bbc0f; --ink: var(--c0); --bg: var(--c3); --box: var(--c3); }
+  body.gbc { --ink: #1d1d28; --bg: #fff7dc; --box: #ffffff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Press Start 2P', monospace; }
+  .phone { max-width: 375px; margin: 0 auto; min-height: 812px; display: flex; flex-direction: column; }
+  canvas { display: block; width: 100%; image-rendering: pixelated; border-bottom: 6px solid var(--ink); }
+  .body { padding: 18px 16px; display: flex; flex-direction: column; gap: 14px; }
+  h1 { margin: 0; font-size: 26px; letter-spacing: 1px; }
+  .sub { font-size: 9px; line-height: 1.8; }
+  .dialog { position: relative; border: 4px solid var(--ink); background: var(--box); padding: 12px; box-shadow: inset 0 0 0 3px var(--box), inset 0 0 0 5px var(--ink); }
+  .dialog p { margin: 0; font-size: 9px; line-height: 1.9; }
+  .dialog .tier { font-size: 12px; margin-top: 6px; }
+  .dialog .arrow { position: absolute; right: 10px; bottom: 6px; font-size: 10px; }
+  .stats { display: flex; justify-content: space-between; font-size: 8px; }
+  .stats b { display: block; font-size: 14px; margin-top: 6px; font-weight: normal; }
+  .btn { border: 4px solid var(--ink); background: var(--ink); color: var(--bg); padding: 14px; text-align: center; font-size: 14px; box-shadow: 4px 4px 0 var(--c1); }
+  body.gbc .btn { background: #2f6fe0; border-color: #1d1d28; color: #fff; box-shadow: 4px 4px 0 #1d1d28; }
+  .r { color: #cf2e28; } .e { color: #7d35c9; }
+  body:not(.gbc) .r, body:not(.gbc) .e { color: var(--c0); }
+</style>
+</head>
+<body>
+<div class="phone">
+  <canvas id="c" width="125" height="144"></canvas>
+  <div class="body">
+    <h1>PARKFLUNG</h1>
+    <p class="sub">5 DOMANDE. PIÙ LA RISPOSTA È RARA, PIÙ STRADA FAI VERSO LA CASA GIALLA.</p>
+    <div class="dialog">
+      <p>HAI DETTO: DEFIBRILLATORE</p>
+      <p class="tier r">SHAVE LIKE A BOMBER!</p>
+      <p>+50 PUNTI</p>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="stats"><span>PARTITE<b>12</b></span><span>RECORD<b>375</b></span><span>MEDIA<b>210</b></span></div>
+    <div class="btn">▶ GIOCA</div>
+  </div>
+</div>
+<script>
+const params = new URLSearchParams(location.search)
+const gbc = params.get('palette') === 'gbc'
+if (gbc) document.body.classList.add('gbc')
+const DMG = ['#0f380f', '#306230', '#8bac0f', '#9bbc0f']
+const P = gbc ? {
+  sky: '#8fd3ff', skyLow: '#c4ecff', sun: '#ffd23f', sunEdge: '#f39c12', cloud: '#ffffff', cloudEdge: '#a9d8f5',
+  sea: '#2f7fd6', seaLight: '#7cc0ff', hillFar: '#a8d86a', hillMid: '#78bf48', hillNear: '#4f9a35', dither: '#3d7f2a',
+  path: '#f4dc9a', pathEdge: '#a9773c', dot: '#d7b46b', house: '#ffd23f', houseEdge: '#b8860b', roof: '#d2492e', door: '#7a4321', window: '#2f7fd6',
+  cart: '#b06c32', cartDark: '#5a3418', trunk: '#8a5a2b', leaf: '#3fbf4a', leafDark: '#1f7a2e', frond: '#1f7a2e', rib: '#d9b23a', skin: '#f5c89a', shirt: '#ffffff', pants: '#2b3a67', hair: '#3b2a1c', o: '#1d1d28', flag: '#ffffff', flagOn: '#2f6fe0', pole: '#5a3418',
+} : {
+  sky: DMG[3], skyLow: DMG[3], sun: DMG[2], sunEdge: DMG[1], cloud: DMG[3], cloudEdge: DMG[2],
+  sea: DMG[1], seaLight: DMG[2], hillFar: DMG[2], hillMid: DMG[2], hillNear: DMG[1], dither: DMG[1],
+  path: DMG[3], pathEdge: DMG[0], dot: DMG[2], house: DMG[3], houseEdge: DMG[0], roof: DMG[1], door: DMG[0], window: DMG[1],
+  cart: DMG[1], cartDark: DMG[0], trunk: DMG[1], leaf: DMG[0], leafDark: DMG[1], frond: DMG[0], rib: DMG[1], skin: DMG[3], shirt: DMG[3], pants: DMG[0], hair: DMG[0], o: DMG[0], flag: DMG[3], flagOn: DMG[0], pole: DMG[0],
+}
+const W = 125, H = 144
+const ctx = document.getElementById('c').getContext('2d')
+const px = (x, y, c) => { if (x >= 0 && y >= 0 && x < W && y < H) { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), 1, 1) } }
+const rect = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h) }
+const disc = (cx, cy, r, c) => { for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) if (x * x + y * y <= r * r + r * 0.6) px(cx + x, cy + y, c) }
+function line(x0, y0, x1, y1, c) { x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1); const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1; let e = dx + dy; for (;;) { px(x0, y0, c); if (x0 === x1 && y0 === y1) break; const e2 = 2 * e; if (e2 >= dy) { e += dy; x0 += sx } if (e2 <= dx) { e += dx; y0 += sy } } }
+
+// Sky, sun, clouds
+for (let y = 0; y < 40; y++) for (let x = 0; x < W; x++) px(x, y, y > 28 && (x + y) % 2 ? P.skyLow : P.sky)
+disc(20, 14, 8, P.sunEdge); disc(20, 14, 7, P.sun)
+function cloud(x, y) { rect(x + 2, y, 10, 1, P.cloudEdge); rect(x, y + 1, 16, 4, P.cloud); rect(x + 4, y - 2, 6, 3, P.cloud); rect(x, y + 5, 16, 1, P.cloudEdge); rect(x + 4, y - 3, 6, 1, P.cloudEdge) }
+cloud(46, 10); cloud(92, 20)
+// Sea
+for (let y = 38; y < 56; y++) for (let x = 0; x < W; x++) px(x, y, P.sea)
+;[[8, 42], [30, 47], [56, 43], [70, 50], [16, 52], [44, 53]].forEach(([x, y]) => { px(x, y, P.seaLight); px(x + 1, y - 1, P.seaLight); px(x + 2, y - 1, P.seaLight); px(x + 3, y, P.seaLight) })
+// Boat
+rect(60, 34, 1, 6, P.o); for (let i = 0; i < 5; i++) rect(61, 34 + i, 4 - i, 1, P.cloud); rect(57, 40, 9, 2, P.o)
+// Land: the headland with the house, then three hills with dithered edges
+const landTop = (x) => x < 74 ? 54 + 2 * Math.sin(x * 0.2) : Math.max(40, 54 - (x - 74) * 0.42)
+const mid = (x) => 82 + 4 * Math.sin(x * 0.08 + 1)
+const near = (x) => 110 + 5 * Math.sin(x * 0.06 + 2)
+for (let x = 0; x < W; x++) for (let y = Math.floor(landTop(x)); y < H; y++) {
+  let c = P.hillFar
+  if (y >= mid(x)) c = P.hillMid
+  if (y >= near(x)) c = P.hillNear
+  if (Math.abs(y - mid(x)) < 2 && (x + y) % 2 === 0) c = P.dither
+  if (Math.abs(y - near(x)) < 2 && (x + y) % 2 === 0) c = P.dither
+  if (gbc === false && c === P.hillMid && (x + y) % 4 === 0) c = DMG[1]
+  px(x, y, c)
+}
+// Palms
+function palm(x, y, h, flip) { for (let i = 0; i < h; i++) px(x + Math.round(Math.sin(i / h * 1.2) * 2 * (flip ? -1 : 1)), y - i, P.trunk); const tx = x + (flip ? -2 : 2), ty = y - h
+  ;[[-6, 2], [6, 2], [-5, -2], [5, -2], [0, -4], [-8, 4], [8, 4]].forEach(([dx, dy]) => line(tx, ty, tx + dx, ty + dy, P.leaf)); px(tx, ty, P.leafDark); px(tx - 1, ty + 1, P.leafDark) }
+palm(6, 80, 12); palm(116, 94, 14, true); palm(112, 140, 10); palm(84, 50, 8, true); palm(122, 44, 7)
+// Trail
+const pts = [[22, 130], [70, 132], [104, 127], [110, 117], [96, 109], [42, 106], [24, 98], [32, 89], [88, 86], [104, 79], [96, 71], [52, 69], [42, 63], [54, 57], [86, 54], [99, 49]]
+const samples = []
+for (let i = 0; i < pts.length - 1; i++) { const [x0, y0] = pts[i], [x1, y1] = pts[i + 1]; const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0)); for (let s = 0; s < n; s++) samples.push([x0 + (x1 - x0) * s / n, y0 + (y1 - y0) * s / n]) }
+samples.forEach(([x, y]) => disc(x, y, 4, P.pathEdge))
+samples.forEach(([x, y]) => disc(x, y, 3, P.path))
+samples.forEach(([x, y], i) => { if (i % 6 === 0) px(x, y, P.dot) })
+// Stops every 100 points
+;[0.2, 0.4, 0.6, 0.8].forEach((f, i) => { const [x, y] = samples[Math.floor(samples.length * f)]; rect(x + 4, y - 9, 1, 9, P.pole); rect(x + 5, y - 9, 5, 4, i < 1 ? P.flagOn : P.flag); rect(x + 5, y - 9, 5, 1, P.o); rect(x + 5, y - 5, 5, 1, P.o); rect(x + 9, y - 9, 1, 4, P.o) })
+// Yellow house by the sea
+rect(97, 38, 15, 10, P.houseEdge); rect(98, 39, 13, 9, P.house)
+for (let i = 0; i < 9; i++) rect(95 + i, 38 - i, 19 - 2 * i, 1, P.roof); rect(95, 38, 19, 1, P.o)
+rect(103, 42, 3, 6, P.door); rect(99, 41, 2, 2, P.window); rect(108, 41, 2, 2, P.window); rect(109, 30, 2, 4, P.roof)
+// Wooden cart
+rect(3, 120, 17, 7, P.cartDark); rect(4, 121, 15, 5, P.cart); for (let x = 8; x < 18; x += 4) rect(x, 121, 1, 5, P.cartDark); line(19, 125, 24, 128, P.cartDark)
+;[[7, 129], [16, 129]].forEach(([x, y]) => { disc(x, y, 3, P.cartDark); disc(x, y, 2, P.cart); px(x, y, P.cartDark); px(x - 1, y, P.cartDark); px(x + 1, y, P.cartDark); px(x, y - 1, P.cartDark); px(x, y + 1, P.cartDark) })
+// The walker, holding a big palm frond over his shoulder
+const wx = 36, wy = 131
+const body = [
+  '..ooo...',
+  '.ohhho..',
+  '.osssoo.',
+  '.osososo',
+  '..oso.so',
+  '.owwwwso',
+  'owwwwwo.',
+  'oswwwo..',
+  '.owwwo..',
+  '.oppppo.',
+  '.opo.po.',
+  'opo..opo',
+  'oo....oo',
+]
+const map = { o: P.o, h: P.hair, s: P.skin, w: P.shirt, p: P.pants }
+body.forEach((row, y) => [...row].forEach((ch, x) => { if (map[ch]) px(wx + x, wy - body.length + y, map[ch]) }))
+// Frond: midrib from the hands, arching up over the head, with leaflets on both sides
+const hx = wx + 6, hy = wy - 8
+const rib = []
+for (let t = 0; t <= 1.0001; t += 0.04) { const x = (1 - t) * (1 - t) * hx + 2 * (1 - t) * t * (hx + 8) + t * t * (hx - 4); const y = (1 - t) * (1 - t) * hy + 2 * (1 - t) * t * (hy - 24) + t * t * (hy - 22); rib.push([x, y, t]) }
+// Collect the frond's pixels first, so it gets a dark outline that lifts it off the grass.
+const frond = new Map()
+const put = (x, y, c) => frond.set(`${Math.round(x)},${Math.round(y)}`, c)
+function frondLine(x0, y0, x1, y1, c) { const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1); for (let s = 0; s <= n; s++) put(x0 + (x1 - x0) * s / n, y0 + (y1 - y0) * s / n, c) }
+rib.forEach(([x, y, t], i) => { if (t > 0.18 && i % 3 !== 1) { const [nx, ny] = rib[Math.min(i + 1, rib.length - 1)]; const dx = nx - x, dy = ny - y, len = Math.hypot(dx, dy) || 1; const L = 7 * (1 - t * 0.5); frondLine(x, y, x - dy / len * L + dx / len * 2.5, y + dx / len * L + dy / len * 2.5, P.frond); frondLine(x, y, x + dy / len * L + dx / len * 2.5, y - dx / len * L + dy / len * 2.5, P.frond) } })
+rib.forEach(([x, y, t]) => put(x, y, t < 0.18 ? P.trunk : P.rib))
+frond.forEach((c, key) => { const [x, y] = key.split(',').map(Number); px(x, y, c) })
+// Hands on the stem, drawn last so they sit in front of it
+px(hx, hy, P.skin); px(hx, hy + 2, P.skin)
+</script>
+</body>
+</html>

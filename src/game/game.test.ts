@@ -169,3 +169,12 @@ describe('built-in questions', () => {
     expect(bank.length).toBeGreaterThanOrEqual(700)
   })
 })
+
+describe('suspense', () => {
+  it('lasts longer the rarer the answer', async () => {
+    const { suspenseMs } = await import('../components/RarityMeter')
+    const times = (['miss', 'c', 'n', 'r', 'e', 't'] as const).map(suspenseMs)
+    for (let i = 2; i < times.length; i++) expect(times[i]).toBeGreaterThan(times[i - 1]!)
+    expect(times[5]).toBeGreaterThan(4000)
+  })
+})
