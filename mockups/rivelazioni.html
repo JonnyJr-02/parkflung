@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ParkFlung · come rivelare la rarità</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Work+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink: #1d2a44; --paper: #f6ecd8; --cream: #fff8ea; --coral: #e8664a; --teal: #1f7a80; --gold: #f2c230; --ease-out: cubic-bezier(0.23, 1, 0.32, 1); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: 'Work Sans', sans-serif; }
+  main { max-width: 420px; margin: 0 auto; padding: 20px 16px 60px; display: flex; flex-direction: column; gap: 28px; }
+  header h1 { margin: 0; font-family: 'DM Serif Display', serif; font-weight: 400; font-size: 2.2rem; line-height: 1; }
+  header p { margin: 8px 0 0; color: #5a6176; }
+  section { display: flex; flex-direction: column; gap: 10px; }
+  h2 { margin: 0; font-family: 'DM Serif Display', serif; font-weight: 400; font-size: 1.7rem; }
+  h2 span { color: var(--coral); }
+  .desc { margin: 0; color: #5a6176; font-size: 0.95rem; line-height: 1.4; }
+  .stage { position: relative; height: 360px; overflow: hidden; border: 2px solid var(--ink); border-radius: 14px; box-shadow: 0 3px 0 var(--ink); background: var(--cream); user-select: none; -webkit-user-select: none; }
+  .tiers { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tiers button, .extra { padding: 8px 12px; border: 2px solid var(--ink); border-radius: 999px; background: var(--cream); color: var(--ink); font: 600 0.85rem 'Work Sans', sans-serif; box-shadow: 0 2px 0 var(--ink); cursor: pointer; }
+  .tiers button:active, .extra:active { transform: translateY(2px); box-shadow: none; }
+  .extra { background: var(--coral); color: #fff; }
+  .note { font-size: 0.8rem; color: #5a6176; margin: 0; }
+
+  /* Tier label shared look */
+  .label { font-family: 'DM Serif Display', serif; line-height: 1.05; }
+
+  /* ---------- 1. Gratta e vinci ---------- */
+  #s-gratta { display: grid; place-items: center; background: repeating-linear-gradient(45deg, #f3e3c3 0 10px, #f6ecd8 10px 20px); }
+  .ticket { position: relative; width: 300px; padding: 14px; border: 2px solid var(--ink); border-radius: 10px; background: var(--cream); box-shadow: 0 4px 0 var(--ink); }
+  .ticket-head { display: flex; justify-content: space-between; align-items: baseline; font-family: 'DM Serif Display', serif; font-size: 1.3rem; }
+  .ticket-head small { font-family: 'Work Sans', sans-serif; font-size: 0.7rem; letter-spacing: 0.15em; color: var(--coral); font-weight: 700; }
+  .scratch { position: relative; height: 170px; margin-top: 10px; border: 2px dashed var(--ink); border-radius: 8px; overflow: hidden; }
+  .prize { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; background: radial-gradient(circle, #fff, #fbefd3); }
+  .prize .label { font-size: 2rem; }
+  .prize .pts { font-weight: 700; }
+  .prize.won .label { animation: stamp 500ms cubic-bezier(0.2, 1.5, 0.4, 1) both; }
+  .scratch canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; transition: opacity 500ms ease; }
+  @keyframes stamp { from { transform: scale(1.5); opacity: 0; } }
+
+  /* ---------- 2. Martello del luna park ---------- */
+  #s-martello { background: linear-gradient(#f4845f, #fbd1a2 70%, #8aa04b 70%); }
+  .tower { position: absolute; left: 96px; bottom: 34px; width: 40px; height: 290px; border: 2px solid var(--ink); border-radius: 8px 8px 0 0; background: repeating-linear-gradient(#fff8ea 0 22px, #f1dcb0 22px 24px); }
+  .bell { position: absolute; left: 86px; bottom: 318px; width: 60px; height: 34px; border: 2px solid var(--ink); border-radius: 30px 30px 6px 6px; background: radial-gradient(circle at 35% 35%, #ffe68a, #d9a514); transform-origin: top center; }
+  .bell.ring { animation: ring 140ms ease-in-out 8 alternate; }
+  @keyframes ring { from { transform: rotate(-12deg); } to { transform: rotate(12deg); } }
+  .puck { position: absolute; left: 102px; bottom: 36px; width: 28px; height: 18px; border: 2px solid var(--ink); border-radius: 50%; background: var(--coral); will-change: transform; }
+  .pad { position: absolute; left: 80px; bottom: 26px; width: 72px; height: 12px; border: 2px solid var(--ink); border-radius: 6px; background: #9aa3b5; transform-origin: bottom; }
+  .pad.hit { animation: squash 220ms ease-out; }
+  @keyframes squash { 30% { transform: scaleY(0.4); } }
+  .ground { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; background: #6f8f3d; border-top: 2px solid var(--ink); }
+  .marks { position: absolute; left: 146px; bottom: 34px; height: 290px; right: 6px; }
+  .mark { position: absolute; left: 0; display: flex; align-items: center; gap: 6px; transform: translateY(50%); padding: 3px 10px; border: 2px solid var(--ink); border-radius: 999px; background: rgba(255, 248, 234, 0.75); font-family: 'DM Serif Display', serif; font-size: 0.82rem; color: #8a8f9c; white-space: nowrap; transition: background 200ms, color 200ms, transform 200ms; }
+  .mark::before { content: ''; position: absolute; left: -14px; top: 50%; width: 12px; border-top: 2px solid var(--ink); }
+  .mark.lit { background: var(--c); color: #fff; }
+  .mark.win { transform: translateY(50%) scale(1.15); box-shadow: 0 0 0 3px #fff8ea, 0 0 18px var(--c); }
+  .hammer { position: absolute; left: 3px; bottom: 30px; width: 110px; height: 110px; transform-origin: 18px 100px; transform: rotate(-20deg); }
+  .hammer .handle { position: absolute; left: 14px; top: 10px; width: 8px; height: 92px; border: 2px solid var(--ink); border-radius: 4px; background: #c27a3e; }
+  .hammer .head { position: absolute; left: -6px; top: 0; width: 50px; height: 26px; border: 2px solid var(--ink); border-radius: 6px; background: #c8553d; }
+
+  /* ---------- 3. Il faro ---------- */
+  #s-faro { background: linear-gradient(#0f1730, #23315a 60%, #123f4a 60%); }
+  .stars i { position: absolute; width: 2px; height: 2px; background: #fff; border-radius: 50%; opacity: 0.8; }
+  .lighthouse { position: absolute; left: 20px; bottom: 20px; width: 60px; height: 190px; }
+  .beam { position: absolute; left: 50px; top: 170px; width: 420px; height: 150px; margin-top: -75px; transform-origin: 0 50%; clip-path: polygon(0 47%, 100% 0, 100% 100%, 0 53%); background: linear-gradient(90deg, rgba(255, 240, 180, 0.85), rgba(255, 240, 180, 0.05)); mix-blend-mode: screen; pointer-events: none; }
+  .buoy { position: absolute; transform: translate(-50%, -50%); padding: 4px 10px; border: 2px solid #05080f; border-radius: 999px; background: #2a3550; color: #6c7590; font-family: 'DM Serif Display', serif; font-size: 0.95rem; white-space: nowrap; transition: background 160ms, color 160ms, box-shadow 160ms; }
+  .buoy.swept { background: #fff3c4; color: var(--ink); box-shadow: 0 0 14px rgba(255, 240, 180, 0.9); }
+  .buoy.won { background: var(--c); color: #fff; box-shadow: 0 0 22px var(--c); transform: translate(-50%, -50%) scale(1.18); transition: transform 300ms cubic-bezier(0.2, 1.5, 0.4, 1), background 160ms; }
+  .sea-line { position: absolute; left: 0; right: 0; top: 60%; height: 2px; background: #2f6f74; }
+
+  /* ---------- 4. Le carte ---------- */
+  #s-carte { background: radial-gradient(circle at 50% 45%, #2a8c86, #1f6a66); perspective: 900px; }
+  .card { position: absolute; left: 0; top: 0; width: 70px; height: 100px; transform-style: preserve-3d; will-change: transform; }
+  .card-inner { position: absolute; inset: 0; transform-style: preserve-3d; }
+  .face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 2px solid var(--ink); border-radius: 8px; backface-visibility: hidden; text-align: center; padding: 4px; }
+  .back { background: repeating-linear-gradient(45deg, #e8664a 0 6px, #d9583d 6px 12px); box-shadow: inset 0 0 0 4px #fff8ea; color: #fff8ea; font-family: 'DM Serif Display', serif; font-size: 1.8rem; }
+  .front { background: var(--cream); transform: rotateY(180deg); }
+  .front .label { font-size: 0.8rem; color: var(--c); }
+  .front .pts { font-size: 0.6rem; font-weight: 700; }
+  .card.dim { opacity: 0.25; transition: opacity 400ms; }
+  .card.glow .front { box-shadow: 0 0 30px var(--c); }
+  .card.gold .front { background: linear-gradient(120deg, #fff3b0, #f2c230); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Come rivelare la rarità</h1>
+    <p>Quattro proposte. Tocca una rarità sotto ogni riquadro per vederla. Più la risposta è rara, più l'attesa è lunga.</p>
+  </header>
+
+  <section>
+    <h2><span>1</span> · Gratta e vinci</h2>
+    <p class="desc">Dopo la risposta arriva un biglietto: lo gratti tu col dito e scopri la rarità. Se non gratti, dopo qualche secondo si gratta da solo.</p>
+    <div class="stage" id="s-gratta">
+      <div class="ticket">
+        <div class="ticket-head"><span>Gratta e Flunga</span><small>PARKFLUNG</small></div>
+        <div class="scratch"><div class="prize"><span class="label"></span><span class="pts"></span></div><canvas></canvas></div>
+      </div>
+    </div>
+    <div class="tiers" data-demo="gratta"></div>
+    <button class="extra" id="gratta-auto">Fallo grattare da solo</button>
+    <p class="note">Prova a grattare con il mouse o col dito.</p>
+  </section>
+
+  <section>
+    <h2><span>2</span> · Il martello del luna park</h2>
+    <p class="desc">Il martello si carica e colpisce: il pallino sale lungo la torre e si ferma all'altezza della rarità. Con Marco B. suona la campana in cima.</p>
+    <div class="stage" id="s-martello">
+      <div class="ground"></div>
+      <div class="tower"></div>
+      <div class="bell"></div>
+      <div class="marks"></div>
+      <div class="pad"></div>
+      <div class="puck"></div>
+      <div class="hammer"><div class="handle"></div><div class="head"></div></div>
+    </div>
+    <div class="tiers" data-demo="martello"></div>
+  </section>
+
+  <section>
+    <h2><span>3</span> · Il faro</h2>
+    <p class="desc">Di notte sul mare: il fascio del faro passa sulle boe delle rarità avanti e indietro, sempre più lento, e alla fine si ferma sulla tua, che si accende.</p>
+    <div class="stage" id="s-faro">
+      <div class="stars"></div>
+      <div class="sea-line"></div>
+      <svg class="lighthouse" viewBox="0 0 60 190">
+        <path d="M14 190 L20 60 H40 L46 190 Z" fill="#fff8ea" stroke="#05080f" stroke-width="2" />
+        <path d="M17 120 H43 M15.5 155 H44.5 M19 90 H41" stroke="#e8664a" stroke-width="9" />
+        <rect x="18" y="38" width="24" height="22" fill="#ffe68a" stroke="#05080f" stroke-width="2" />
+        <path d="M14 38 L30 18 L46 38 Z" fill="#e8664a" stroke="#05080f" stroke-width="2" />
+      </svg>
+      <div class="beam"></div>
+    </div>
+    <div class="tiers" data-demo="faro"></div>
+  </section>
+
+  <section>
+    <h2><span>4</span> · Le carte</h2>
+    <p class="desc">Sei carte coperte, una per rarità, vengono mescolate. Poi una si alza, trema e si gira lentamente. Più è rara, più vengono mescolate.</p>
+    <div class="stage" id="s-carte"></div>
+    <div class="tiers" data-demo="carte"></div>
+  </section>
+</main>
+<script>
+const TIERS = [
+  { key: 'miss', label: 'morto di CACCA ADDOSSO !', short: 'Miss', color: '#7a4a1e', pts: 0 },
+  { key: 'c', label: 'bada che storia', short: 'Comune', color: '#6b7480', pts: 10 },
+  { key: 'n', label: 'parata col petto', short: 'Non comune', color: '#23803f', pts: 25 },
+  { key: 'r', label: 'Shave like a Bomber!', short: 'Raro', color: '#cf2e28', pts: 50 },
+  { key: 'e', label: 'Jonny 🍆', short: 'Esclusivo', color: '#7d35c9', pts: 75 },
+  { key: 't', label: 'Marco B.', short: 'Marco B.', color: '#b8860b', pts: 100 },
+]
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const runners = {}
+let running = {}
+document.querySelectorAll('.tiers').forEach((box) => {
+  TIERS.forEach((tier, index) => {
+    const b = document.createElement('button')
+    b.textContent = tier.short
+    b.onclick = () => runners[box.dataset.demo](index)
+    box.appendChild(b)
+  })
+})
+function buzz(ms = 6) { try { navigator.vibrate?.(ms) } catch {} }
+
+/* ---------- 1. Gratta e vinci ---------- */
+;(() => {
+  const canvas = document.querySelector('#s-gratta canvas'), prize = document.querySelector('#s-gratta .prize'), ctx = canvas.getContext('2d')
+  let revealed = false, scratching = false, autoTimer = 0, current = 3
+  function reset(index) {
+    current = index
+    const tier = TIERS[index]
+    const r = canvas.getBoundingClientRect()
+    canvas.width = r.width * devicePixelRatio; canvas.height = r.height * devicePixelRatio
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0)
+    prize.classList.remove('won'); prize.querySelector('.label').textContent = tier.label; prize.querySelector('.label').style.color = tier.color; prize.querySelector('.pts').textContent = `+${tier.pts} punti`
+    ctx.globalCompositeOperation = 'source-over'
+    const g = ctx.createLinearGradient(0, 0, r.width, r.height); g.addColorStop(0, '#b9c0cb'); g.addColorStop(0.5, '#eef1f5'); g.addColorStop(1, '#a7aeb9')
+    ctx.fillStyle = g; ctx.fillRect(0, 0, r.width, r.height)
+    for (let i = 0; i < 900; i++) { ctx.fillStyle = `rgba(29,42,68,${Math.random() * 0.12})`; ctx.fillRect(Math.random() * r.width, Math.random() * r.height, 1.5, 1.5) }
+    ctx.fillStyle = 'rgba(29,42,68,0.55)'; ctx.font = '700 15px Work Sans'; ctx.textAlign = 'center'; ctx.fillText('GRATTA QUI', r.width / 2, r.height / 2 + 5)
+    canvas.style.opacity = 1; revealed = false
+    clearTimeout(autoTimer); autoTimer = setTimeout(() => auto(), 4500)
+  }
+  function scratchAt(x, y) { ctx.globalCompositeOperation = 'destination-out'; ctx.beginPath(); ctx.arc(x, y, 17, 0, Math.PI * 2); ctx.fill() }
+  function cleared() { const { width, height } = canvas; const data = ctx.getImageData(0, 0, width, height).data; let clear = 0, total = 0; for (let i = 3; i < data.length; i += 4 * 40) { total++; if (data[i] < 40) clear++ } return clear / total }
+  function reveal() { if (revealed) return; revealed = true; clearTimeout(autoTimer); canvas.style.opacity = 0; prize.classList.add('won'); buzz(30) }
+  let last = null
+  canvas.addEventListener('pointerdown', (e) => { scratching = true; clearTimeout(autoTimer); canvas.setPointerCapture(e.pointerId); last = [e.offsetX, e.offsetY]; scratchAt(e.offsetX, e.offsetY) })
+  canvas.addEventListener('pointermove', (e) => { if (!scratching || revealed) return; const [lx, ly] = last; const steps = Math.ceil(Math.hypot(e.offsetX - lx, e.offsetY - ly) / 6); for (let s = 1; s <= steps; s++) scratchAt(lx + (e.offsetX - lx) * s / steps, ly + (e.offsetY - ly) * s / steps); last = [e.offsetX, e.offsetY]; buzz(2); if (cleared() > 0.55) reveal() })
+  canvas.addEventListener('pointerup', () => { scratching = false })
+  async function auto() {
+    if (revealed) return
+    const r = canvas.getBoundingClientRect(), duration = 2200 + current * 750, start = performance.now(), rows = 5
+    await new Promise((done) => { const step = (now) => { if (revealed) return done(); const t = Math.min(1, (now - start) / duration); const p = t * rows; const row = Math.floor(p), f = p - row; const x = (row % 2 ? 1 - f : f) * r.width, y = ((row + 0.5) / rows) * r.height + Math.sin(f * 12) * 10; scratchAt(x, y); if (t < 1) requestAnimationFrame(step); else done() }; requestAnimationFrame(step) })
+    reveal()
+  }
+  runners.gratta = (index) => reset(index)
+  document.getElementById('gratta-auto').onclick = () => { clearTimeout(autoTimer); auto() }
+  setTimeout(() => reset(3), 300)
+})()
+
+/* ---------- 2. Martello ---------- */
+;(() => {
+  const stage = document.getElementById('s-martello'), marks = stage.querySelector('.marks'), puck = stage.querySelector('.puck'), hammer = stage.querySelector('.hammer'), pad = stage.querySelector('.pad'), bell = stage.querySelector('.bell')
+  const STEP = 50, BASE = 22
+  TIERS.forEach((tier, i) => { const m = document.createElement('span'); m.className = 'mark'; m.style.bottom = `${BASE + i * STEP}px`; m.style.setProperty('--c', tier.color); m.textContent = tier.label; marks.appendChild(m) })
+  let token = 0
+  runners.martello = async (index) => {
+    const my = ++token
+    marks.querySelectorAll('.mark').forEach((m) => m.classList.remove('lit', 'win'))
+    puck.getAnimations().forEach((a) => a.cancel()); puck.style.transform = ''
+    // Wind-up: the hammer rocks back, more times for rarer answers
+    const wiggles = 1 + Math.ceil(index / 2)
+    for (let w = 0; w < wiggles; w++) { await hammer.animate([{ transform: 'rotate(-20deg)' }, { transform: 'rotate(-70deg)' }, { transform: 'rotate(-20deg)' }], { duration: 520 + w * 80, easing: 'ease-in-out' }).finished; if (my !== token) return }
+    await hammer.animate([{ transform: 'rotate(-75deg)' }, { transform: 'rotate(88deg)' }], { duration: 200, easing: 'cubic-bezier(.6,0,1,1)', fill: 'forwards' }).finished
+    pad.classList.remove('hit'); void pad.offsetWidth; pad.classList.add('hit'); buzz(20)
+    const height = index === 0 ? 14 : BASE + index * STEP + (index === 5 ? 18 : 0) - 9
+    const rise = 700 + index * 520
+    const climb = puck.animate([{ transform: 'translateY(0)' }, { transform: `translateY(${-height}px)` }], { duration: rise, easing: 'cubic-bezier(.15,.75,.3,1)', fill: 'forwards' })
+    // Light each mark as the puck passes it
+    const t0 = performance.now()
+    let climbing = true
+    const watch = () => { if (!climbing || my !== token) return; const y = -new DOMMatrix(getComputedStyle(puck).transform).m42; marks.querySelectorAll('.mark').forEach((m, i) => { const on = y + 9 >= BASE + i * STEP - 4 && i <= index; if (on && !m.classList.contains('lit')) buzz(4); m.classList.toggle('lit', on) }); requestAnimationFrame(watch) }
+    requestAnimationFrame(watch)
+    await climb.finished
+    climbing = false
+    if (my !== token) return
+    marks.querySelectorAll('.mark').forEach((m, i) => m.classList.toggle('lit', i <= index))
+    marks.querySelectorAll('.mark')[index].classList.add('win')
+    if (index === 5) { bell.classList.remove('ring'); void bell.offsetWidth; bell.classList.add('ring'); buzz(80) }
+    await puck.animate([{ transform: `translateY(${-height}px)` }, { transform: `translateY(${-height - 5}px)` }, { transform: `translateY(${-height}px)` }], { duration: 400, easing: 'ease-in-out' }).finished
+    hammer.animate([{ transform: 'rotate(88deg)' }, { transform: 'rotate(-20deg)' }], { duration: 500, easing: 'ease-out', fill: 'forwards' })
+  }
+})()
+
+/* ---------- 3. Il faro ---------- */
+;(() => {
+  const stage = document.getElementById('s-faro'), beam = stage.querySelector('.beam')
+  const stars = stage.querySelector('.stars')
+  for (let i = 0; i < 26; i++) { const s = document.createElement('i'); s.style.left = `${Math.random() * 100}%`; s.style.top = `${Math.random() * 55}%`; stars.appendChild(s) }
+  const LAMP = [50, 190]
+  // The buoys stand in a zig-zag column on the sea, the commonest at the bottom.
+  const SPOTS = [[236, 322], [214, 264], [240, 206], [214, 148], [240, 90], [214, 34]]
+  const ANGLES = SPOTS.map(([x, y]) => (Math.atan2(y - LAMP[1], x - LAMP[0]) * 180) / Math.PI)
+  beam.style.left = `${LAMP[0]}px`; beam.style.top = `${LAMP[1]}px`
+  const buoys = TIERS.map((tier, i) => { const b = document.createElement('span'); b.className = 'buoy'; b.textContent = tier.label; b.style.setProperty('--c', tier.color); b.style.left = `${SPOTS[i][0]}px`; b.style.top = `${SPOTS[i][1]}px`; stage.appendChild(b); return b })
+  let token = 0
+  beam.style.transform = 'rotate(-75deg)'
+  runners.faro = async (index) => {
+    const my = ++token
+    buoys.forEach((b) => b.classList.remove('won', 'swept'))
+    const target = ANGLES[index], start = ANGLES[5] - 22, A = start - target
+    const duration = 3200 + index * 900, period = 1500
+    const tau = duration / Math.log(Math.abs(A) / 0.6)
+    const t0 = performance.now()
+    let lastSwept = -1
+    await new Promise((done) => {
+      const step = (now) => {
+        if (my !== token) return done()
+        const t = now - t0
+        const angle = t >= duration ? target : target + A * Math.exp(-t / tau) * Math.cos((2 * Math.PI * t) / period)
+        beam.style.transform = `rotate(${angle}deg)`
+        let swept = -1
+        ANGLES.forEach((a, i) => { const on = Math.abs(angle - a) < 4; buoys[i].classList.toggle('swept', on); if (on) swept = i })
+        if (swept !== -1 && swept !== lastSwept) buzz(4)
+        lastSwept = swept
+        if (t < duration) requestAnimationFrame(step)
+        else done()
+      }
+      requestAnimationFrame(step)
+    })
+    if (my !== token) return
+    buoys.forEach((b) => b.classList.remove('swept'))
+    buoys[index].classList.add('won'); buzz(40)
+  }
+})()
+
+/* ---------- 4. Le carte ---------- */
+;(() => {
+  const stage = document.getElementById('s-carte')
+  const W = stage.clientWidth || 380
+  const slots = [0, 1, 2, 3, 4, 5].map((i) => [W / 2 - 115 + (i % 3) * 80 - 35 + 35, 60 + Math.floor(i / 3) * 120])
+  const cards = TIERS.map((tier, i) => {
+    const card = document.createElement('div'); card.className = 'card'; card.style.setProperty('--c', tier.color)
+    card.innerHTML = `<div class="card-inner"><div class="face back">P</div><div class="face front"><span class="label">${tier.label}</span><span class="pts">+${tier.pts}</span></div></div>`
+    stage.appendChild(card); return card
+  })
+  let order = [0, 1, 2, 3, 4, 5], token = 0
+  const place = (card, [x, y], extra = '') => (card.style.transform = `translate(${x}px, ${y}px) ${extra}`)
+  function layout() { cards.forEach((c, i) => { c.classList.remove('dim', 'glow', 'gold'); c.getAnimations().forEach((a) => a.cancel()); c.querySelector('.card-inner').getAnimations().forEach((a) => a.cancel()); c.querySelector('.card-inner').style.transform = ''; place(c, slots[order.indexOf(i)]) }) }
+  layout()
+  runners.carte = async (index) => {
+    const my = ++token
+    order = [0, 1, 2, 3, 4, 5]; layout()
+    await sleep(300)
+    const swaps = 5 + index * 2
+    for (let s = 0; s < swaps; s++) {
+      if (my !== token) return
+      const a = Math.floor(Math.random() * 6); let b = Math.floor(Math.random() * 5); if (b >= a) b++
+      const ca = cards[order[a]], cb = cards[order[b]]
+      const d = 200 + s * 12
+      const lift = 'translateY(-18px) rotate(6deg)'
+      buzz(3)
+      await Promise.all([
+        ca.animate([{ transform: `translate(${slots[a][0]}px, ${slots[a][1]}px)` }, { transform: `translate(${(slots[a][0] + slots[b][0]) / 2}px, ${(slots[a][1] + slots[b][1]) / 2 - 30}px) rotate(8deg)` }, { transform: `translate(${slots[b][0]}px, ${slots[b][1]}px)` }], { duration: d, easing: 'ease-in-out' }).finished,
+        cb.animate([{ transform: `translate(${slots[b][0]}px, ${slots[b][1]}px)` }, { transform: `translate(${(slots[a][0] + slots[b][0]) / 2}px, ${(slots[a][1] + slots[b][1]) / 2 + 30}px) rotate(-8deg)` }, { transform: `translate(${slots[a][0]}px, ${slots[a][1]}px)` }], { duration: d, easing: 'ease-in-out' }).finished,
+      ])
+      ;[order[a], order[b]] = [order[b], order[a]]
+      place(ca, slots[b]); place(cb, slots[a])
+    }
+    if (my !== token) return
+    const card = cards[index], from = slots[order.indexOf(index)]
+    const center = [W / 2 - 35, 120]
+    cards.forEach((c, i) => i !== index && c.classList.add('dim'))
+    await card.animate([{ transform: `translate(${from[0]}px, ${from[1]}px)` }, { transform: `translate(${center[0]}px, ${center[1]}px) scale(2.2)` }], { duration: 600, easing: 'cubic-bezier(.23,1,.32,1)', fill: 'forwards' }).finished
+    for (let w = 0; w <= index; w++) { if (my !== token) return; await card.animate([{ transform: `translate(${center[0]}px, ${center[1]}px) scale(2.2) rotate(0)` }, { transform: `translate(${center[0]}px, ${center[1]}px) scale(2.2) rotate(-4deg)` }, { transform: `translate(${center[0]}px, ${center[1]}px) scale(2.2) rotate(4deg)` }, { transform: `translate(${center[0]}px, ${center[1]}px) scale(2.2) rotate(0)` }], { duration: 360 }).finished; buzz(5) }
+    if (index === 5) card.classList.add('gold')
+    await card.querySelector('.card-inner').animate([{ transform: 'rotateY(0)' }, { transform: 'rotateY(180deg)' }], { duration: 700 + index * 160, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'forwards' }).finished
+    if (my !== token) return
+    card.classList.add('glow'); buzz(40)
+  }
+})()
+</script>
+</body>
+</html>

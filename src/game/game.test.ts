@@ -172,8 +172,8 @@ describe('built-in questions', () => {
 
 describe('suspense', () => {
   it('lasts longer the rarer the answer', async () => {
-    const { spinMs } = await import('../components/SlotReveal')
-    const times = (['miss', 'c', 'n', 'r', 'e', 't'] as const).map(spinMs)
+    const { revealMs } = await import('../components/RarityMeter')
+    const times = (['miss', 'c', 'n', 'r', 'e', 't'] as const).map(revealMs)
     for (let i = 1; i < times.length; i++) expect(times[i]).toBeGreaterThan(times[i - 1]!)
     expect(times[0]).toBeGreaterThan(5000)
     expect(times[5]).toBeGreaterThan(9000)

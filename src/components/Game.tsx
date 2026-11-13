@@ -4,7 +4,7 @@ import type { Question } from '../game/parse'
 import { markSeen } from '../game/store'
 import { MAX_SCORE, STOPS, TIER_INFO, type Outcome } from '../game/tiers'
 import { Farflung } from './Farflung'
-import { SlotReveal } from './SlotReveal'
+import { RarityMeter } from './RarityMeter'
 import { WalkOverlay } from './WalkOverlay'
 
 export interface Result {
@@ -19,7 +19,7 @@ export interface Result {
 type Phase =
   | { kind: 'ask' }
   | { kind: 'confirm'; answer: Answer }
-  /** The slot machine is spinning; the result is not counted yet. */
+  /** The rarity meter is climbing; the result is not counted yet. */
   | { kind: 'suspense'; result: Result }
   /** Full-screen gold for the rarest tier, before the walker moves. */
   | { kind: 'celebrate'; result: Result }
@@ -165,7 +165,7 @@ export function Game({
         )}
 
         {phase.kind === 'suspense' && (
-          <SlotReveal
+          <RarityMeter
             key={question.id}
             outcome={phase.result.outcome}
             typed={phase.result.answer?.label ?? phase.result.typed}

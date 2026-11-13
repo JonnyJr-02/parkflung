@@ -805,23 +805,27 @@ button {
   color: #4a3300;
 }
 
-/* ---------- Slot machine ---------- */
+/* ---------- Rarity meter ---------- */
 
-.slot {
+.meter {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  padding: 16px 14px 18px;
+  border: 2px solid var(--edge);
+  border-radius: var(--radius-l);
+  background: var(--surface);
+  box-shadow: var(--shadow);
   animation: pop 300ms var(--ease-out) both;
 }
 
-.slot-kicker {
+.meter-kicker {
   color: var(--muted);
   font-size: 0.85rem;
 }
 
-.slot-answer {
-  margin-bottom: 10px;
+.meter-answer {
   font-family: var(--serif);
   font-size: 1.6rem;
   line-height: 1.1;
@@ -829,210 +833,177 @@ button {
   overflow-wrap: anywhere;
 }
 
-.slot-machine {
-  position: relative;
-  width: 100%;
-  padding: 14px 50px 12px 14px;
-  border: 2px solid var(--edge);
-  border-radius: 22px 22px 12px 12px;
-  background: linear-gradient(#ee7a5e, #c8553d);
-  box-shadow: 0 4px 0 var(--edge);
+.meter-title {
+  min-height: 1.5em;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-weight: 600;
 }
 
-.slot-sign {
-  color: #fff8ea;
-  font-family: var(--serif);
-  font-size: 1.35rem;
-  text-align: center;
-  text-shadow: 0 2px 0 #1d2a44;
+.meter.done .meter-title {
+  color: var(--ink);
 }
 
-.slot-bulbs {
+.meter-dots span {
+  animation: blink 900ms steps(1) infinite;
+}
+.meter-dots span:nth-child(2) { animation-delay: 300ms; }
+.meter-dots span:nth-child(3) { animation-delay: 600ms; }
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+.meter-body {
   display: flex;
-  justify-content: space-between;
-  margin: 8px 4px;
+  gap: 12px;
+  width: 100%;
 }
 
-.bulb {
-  width: 11px;
-  height: 11px;
-  border: 1.5px solid #1d2a44;
-  border-radius: 50%;
-  background: #fbe3a0;
-  box-shadow: 0 0 6px rgb(255 230 150 / 0.8);
+.meter-steps {
+  display: flex;
+  flex: 1;
+  flex-direction: column-reverse;
+  gap: 6px;
+  min-width: 0;
 }
 
-.slot-spinning .bulb {
-  animation: bulb 360ms steps(1) infinite;
-}
-
-.slot-spinning .bulb:nth-child(even) {
-  animation-delay: 180ms;
-}
-
-@keyframes bulb {
-  50% {
-    background: #7a3a28;
-    box-shadow: none;
-  }
-}
-
-.slot-won .bulb {
-  background: var(--tier);
-  box-shadow: 0 0 10px var(--tier);
-  animation: bulb 240ms steps(1) 5;
-}
-
-.slot-window {
-  /* The reel is printed paper in both themes, so the rarity colours keep their light values. */
-  --tier-miss: #7a4a1e;
-  --tier-c: #6b7480;
-  --tier-n: #23803f;
-  --tier-r: #cf2e28;
-  --tier-e: #7d35c9;
-  --tier-t: #b8860b;
-  position: relative;
-  height: 192px;
-  overflow: hidden;
-  border: 2px solid #1d2a44;
-  border-radius: 10px;
-  background: #fff8ea;
-}
-
-.slot-window::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(rgb(29 42 68 / 0.45), rgb(29 42 68 / 0) 30%, rgb(29 42 68 / 0) 70%, rgb(29 42 68 / 0.45));
-  pointer-events: none;
-}
-
-.slot-reel {
-  will-change: transform;
-}
-
-.slot-row {
+.meter-step {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  height: 64px;
-  padding: 0 16px;
-  border-bottom: 1.5px dashed rgb(29 42 68 / 0.22);
-  color: var(--tier);
+  gap: 8px;
+  height: 46px;
+  padding: 0 14px;
+  border: 2px solid var(--edge);
+  border-radius: 999px;
+  background: var(--line);
+  color: var(--muted);
+  opacity: 0.6;
+  transition:
+    background-color 200ms ease,
+    color 200ms ease,
+    opacity 200ms ease;
+}
+
+.meter-label {
+  overflow: hidden;
   font-family: var(--serif);
-  font-size: 1.35rem;
+  font-size: 1.05rem;
   line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.slot-points {
-  color: #1d2a44;
-  font-family: var(--font);
-  font-size: 0.95rem;
+.meter-points {
+  flex: none;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-.slot-row.win {
-  background: color-mix(in srgb, var(--tier) 16%, #fff8ea);
+.meter-step.on {
+  background: var(--tier);
+  color: #ffffff;
+  opacity: 1;
+  animation: light 340ms var(--ease-out);
+}
+
+.meter-step.tier-t.on {
+  background: linear-gradient(120deg, var(--gold-1), var(--gold-2) 55%, var(--gold-3));
+  color: #3a2700;
+}
+
+.meter-step.tease {
+  animation: tease 280ms ease-in-out infinite alternate;
+}
+
+.meter-step.win {
   animation: win 520ms ease-in-out 2;
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--tier), 0 0 18px var(--tier);
 }
 
-.slot-row.tier-t.win {
-  background: linear-gradient(120deg, var(--gold-1), var(--gold-2));
+.meter-step.tier-miss.win {
+  animation: shake 420ms var(--ease-out);
+}
+
+@keyframes light {
+  0% { transform: scale(0.96); }
+  45% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+@keyframes tease {
+  from { opacity: 0.6; }
+  to { opacity: 1; background: color-mix(in srgb, var(--tier) 45%, var(--line)); }
 }
 
 @keyframes win {
-  50% {
-    transform: scale(1.05);
-  }
+  50% { transform: scale(1.05); }
 }
 
-.slot-payline {
+/* The thermometer beside the ladder: same height, one tick per rarity. */
+.thermo {
+  --fill: var(--primary);
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: calc(var(--h) + 16px);
+}
+
+.thermo.tier-miss,
+.thermo.tier-c,
+.thermo.tier-n,
+.thermo.tier-r,
+.thermo.tier-e,
+.thermo.tier-t {
+  --fill: var(--tier);
+}
+
+.thermo-tube {
   position: absolute;
-  z-index: 1;
-  left: 0;
+  left: 6px;
+  top: 0;
+  width: 22px;
+  height: var(--h);
+  overflow: hidden;
+  border: 2px solid var(--edge);
+  border-radius: 11px 11px 0 0;
+  border-bottom: 0;
+  background: var(--line);
+}
+
+.thermo-fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--fill) 75%, #ffffff), var(--fill) 55%);
+  transform: translateY(100%);
+  transition: background 250ms ease;
+  will-change: transform;
+}
+
+.thermo-tick {
+  position: absolute;
   right: 0;
-  top: 64px;
-  height: 64px;
-  border-top: 2px solid #e8664a;
-  border-bottom: 2px solid #e8664a;
-  pointer-events: none;
+  width: 7px;
+  border-top: 2px solid var(--edge);
+  opacity: 0.6;
 }
 
-.slot-payline::before,
-.slot-payline::after {
-  content: '';
+.thermo-bulb {
   position: absolute;
-  top: 50%;
-  margin-top: -8px;
-  border: 8px solid transparent;
-}
-
-.slot-payline::before {
   left: 0;
-  border-left-color: #e8664a;
-}
-
-.slot-payline::after {
-  right: 0;
-  border-right-color: #e8664a;
-}
-
-.slot-lever {
-  position: absolute;
-  right: 10px;
-  top: 30%;
-  width: 26px;
-  height: 90px;
-  perspective: 240px;
-}
-
-.slot-lever::after {
-  content: '';
-  position: absolute;
-  left: 4px;
-  bottom: -6px;
-  width: 18px;
-  height: 14px;
-  border: 2px solid #1d2a44;
-  border-radius: 4px;
-  background: #9aa3b5;
-}
-
-.slot-lever-arm {
-  position: absolute;
-  left: 10px;
-  bottom: 0;
-  width: 6px;
-  height: 74px;
-  border: 1.5px solid #1d2a44;
-  border-radius: 3px;
-  background: #d9dde6;
-  transform-origin: bottom center;
-}
-
-.slot-lever-arm::before {
-  content: '';
-  position: absolute;
-  top: -16px;
-  left: -9px;
-  width: 20px;
-  height: 20px;
-  border: 2px solid #1d2a44;
+  bottom: -10px;
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--edge);
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #ff9a7c, #c0392b);
+  background: var(--fill);
+  transition: background-color 250ms ease;
 }
 
-.slot-lever .slot-lever-arm {
-  animation: pull 620ms var(--ease-in-out);
+.meter.done .thermo-bulb {
+  animation: win 520ms ease-in-out 2;
 }
-
-@keyframes pull {
-  45% {
-    transform: rotateX(150deg);
-  }
-}
-
 
 /* ---------- Reveal ---------- */
 
