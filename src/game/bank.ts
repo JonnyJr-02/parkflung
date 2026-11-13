@@ -4,16 +4,58 @@ import { TIERS, type Tier } from './tiers'
 
 const packs = import.meta.glob<string>('../data/*.txt', { query: '?raw', import: 'default', eager: true })
 
-/** The questions written in src/data, parsed once. */
+/** Share of a question's answers in each tier, commonest first: a normal curve cut into five 1σ-wide bins. */
+export const GAUSSIAN_SHARE = [0.067, 0.242, 0.383, 0.242, 0.067] as const
+
+/** How many answers go in each tier for a question with `n` answers: at least one each, largest remainders first. */
+export function gaussianSizes(n: number): number[] {
+  const exact = GAUSSIAN_SHARE.map((share) => share * n)
+  const sizes = exact.map((x) => Math.max(1, Math.floor(x)))
+  let total = sizes.reduce((sum, size) => sum + size, 0)
+  const byRemainder = [0, 1, 2, 3, 4].sort((a, b) => exact[b]! - Math.floor(exact[b]!) - (exact[a]! - Math.floor(exact[a]!)))
+  for (let k = 0; total < n; k++, total++) sizes[byRemainder[k % 5]!]! += 1
+  while (total > n) {
+    sizes[sizes.indexOf(Math.max(...sizes))]! -= 1
+    total--
+  }
+  return sizes
+}
+
+/**
+ * Re-cuts a question's tiers along the normal curve. The answers keep their order, from the one
+ * most people would say to the rarest, so the rarity of each answer decides its tier.
+ */
+export function gaussianTiers(raw: RawQuestion): RawQuestion {
+  const ranked = TIERS.flatMap((tier) => raw[tier])
+  if (ranked.length < TIERS.length) return raw
+  const out: RawQuestion = { q: raw.q, c: [], n: [], r: [], e: [], t: [] }
+  let start = 0
+  gaussianSizes(ranked.length).forEach((size, index) => {
+    out[TIERS[index]!] = ranked.slice(start, start + size)
+    start += size
+  })
+  return out
+}
+
+/**
+ * The questions written in src/data, parsed once. A prompt written again in a later file (the
+ * extra-*.txt packs) adds its answers to the same question, tier by tier; then every question is
+ * cut into tiers along the normal curve.
+ */
 export const builtIn: { questions: RawQuestion[]; problems: string[] } = (() => {
-  const questions: RawQuestion[] = []
+  const byId = new Map<string, RawQuestion>()
   const problems: string[] = []
   for (const [file, text] of Object.entries(packs).sort(([a], [b]) => a.localeCompare(b))) {
     const parsed = parseText(text)
-    questions.push(...parsed.questions)
+    for (const raw of parsed.questions) {
+      const id = questionId(raw.q)
+      const known = byId.get(id)
+      if (known) TIERS.forEach((tier) => known[tier].push(...raw[tier]))
+      else byId.set(id, { q: raw.q, c: [...raw.c], n: [...raw.n], r: [...raw.r], e: [...raw.e], t: [...raw.t] })
+    }
     problems.push(...parsed.problems.map((problem) => `${file}: ${problem}`))
   }
-  return { questions, problems }
+  return { questions: [...byId.values()].map(gaussianTiers), problems }
 })()
 
 /**
@@ -163,8 +205,6 @@ export const LETTER_GROUPS: ReadonlyArray<{ subject: string; sources: string[] }
     ],
   },
   { subject: 'Un nome di persona', sources: ['Un nome maschile', 'Un nome femminile'] },
-  { subject: 'Un nome maschile', sources: ['Un nome maschile'] },
-  { subject: 'Un nome femminile', sources: ['Un nome femminile'] },
   { subject: 'Uno strumento musicale', sources: ['Uno strumento musicale', 'Uno strumento a fiato', 'Uno strumento a percussione', 'Uno strumento a corda'] },
   {
     subject: 'Un luogo famoso di una città',
@@ -232,8 +272,6 @@ export const LETTER_GROUPS: ReadonlyArray<{ subject: string; sources: string[] }
 
 /** A letter question needs at least this many answers to be fun. */
 export const MIN_LETTER_ANSWERS = 12
-/** Share of each letter's answers, from the commonest tier to the rarest. */
-const TIER_SHARE: Record<Tier, number> = { c: 0.12, n: 0.16, r: 0.2, e: 0.22, t: 0.3 }
 
 function initial(form: string): string {
   return tokenize(form).join(' ').charAt(0)
@@ -263,25 +301,16 @@ export function deriveLetterQuestions(written: readonly RawQuestion[]): RawQuest
     }
     pool.sort((a, b) => TIERS.indexOf(a.tier) - TIERS.indexOf(b.tier) || a.order - b.order)
 
+    // Only the richest letter of each subject: many "… che inizia con la X" would feel all the same.
+    let best: { letter: string; entries: string[] } | null = null
     for (const letter of 'abcdefghijklmnopqrstuvwxyz') {
       const entries = pool
         .map((answer) => answer.forms.filter((form) => initial(form) === letter))
         .filter((forms) => forms.length > 0)
         .map((forms) => forms.join('/'))
-      if (entries.length < MIN_LETTER_ANSWERS) continue
-      const question: RawQuestion = { q: `${group.subject} che inizia con la ${letter.toUpperCase()}`, c: [], n: [], r: [], e: [], t: [] }
-      let start = 0
-      TIERS.forEach((tier, index) => {
-        const rest = TIERS.slice(index + 1).length
-        const size =
-          index === TIERS.length - 1
-            ? entries.length - start
-            : Math.min(Math.max(1, Math.round(entries.length * TIER_SHARE[tier])), entries.length - start - rest)
-        question[tier] = entries.slice(start, start + size)
-        start += size
-      })
-      out.push(question)
+      if (entries.length >= MIN_LETTER_ANSWERS && entries.length > (best?.entries.length ?? 0)) best = { letter, entries }
     }
+    if (best) out.push(gaussianTiers({ q: `${group.subject} che inizia con la ${best.letter.toUpperCase()}`, c: best.entries, n: [], r: [], e: [], t: [] }))
   }
   return out
 }
@@ -327,8 +356,33 @@ function shuffle<T>(items: readonly T[], random: () => number): T[] {
 }
 
 /**
- * Never-played questions first, in random order. When they run out and `repeat` is on, the ones
- * played longest ago come back; with `repeat` off the result can hold fewer than `count`.
+ * Questions of one family look alike ("Una città del Giappone", "Una città della Spagna"):
+ * the family is the first word that is not an article, and every letter question is one family.
+ */
+export function family(prompt: string): string {
+  if (/ che inizia con la \S+$/i.test(prompt)) return 'lettera'
+  return tokenize(prompt)[0] ?? prompt
+}
+
+/** Takes `count` questions in the given order, skipping a family already taken while others are left. */
+function spread(ordered: readonly Question[], count: number): Question[] {
+  const used = new Set<string>()
+  const first: Question[] = []
+  const rest: Question[] = []
+  for (const question of ordered) {
+    const kind = family(question.prompt)
+    if (first.length < count && !used.has(kind)) {
+      used.add(kind)
+      first.push(question)
+    } else rest.push(question)
+  }
+  return [...first, ...rest].slice(0, count)
+}
+
+/**
+ * Never-played questions first, in random order, no two of the same family. When they run out and
+ * `repeat` is on, the ones played longest ago come back; with `repeat` off the result can hold
+ * fewer than `count`.
  */
 export function pickQuestions(
   bank: readonly Question[],
@@ -341,12 +395,12 @@ export function pickQuestions(
     bank.filter((question) => seen[question.id] === undefined),
     random,
   )
-  if (fresh.length >= count || !repeat) return fresh.slice(0, count)
+  if (fresh.length >= count || !repeat) return spread(fresh, count)
   const played = shuffle(
     bank.filter((question) => seen[question.id] !== undefined),
     random,
   ).sort((a, b) => seen[a.id]! - seen[b.id]!)
-  return shuffle([...fresh, ...played.slice(0, count - fresh.length)], random)
+  return shuffle(spread([...fresh, ...played], count), random)
 }
 
 export function countFresh(bank: readonly Question[], seen: Readonly<Record<string, number>>): number {

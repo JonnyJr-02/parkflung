@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { builtIn, derived, LETTER_GROUPS, MIN_LETTER_ANSWERS, mergeBank, mergeCustom, pickQuestions } from './bank'
+import { builtIn, derived, family, LETTER_GROUPS, MIN_LETTER_ANSWERS, mergeBank, mergeCustom, pickQuestions } from './bank'
 import { editDistance, matchAnswer, stem, tokenize } from './match'
 import { compile, parseJson, parseText, parseUpload, type RawQuestion } from './parse'
 import { MAX_SCORE, stopsReached, TIERS } from './tiers'
@@ -115,6 +115,19 @@ describe('choosing questions', () => {
     expect(picked.sort()).toEqual([bank[6]!.id, bank[7]!.id].sort())
   })
 
+  it('never puts two look-alike questions in one game', () => {
+    expect(family('Una città del Giappone')).toBe(family("Una città dell'Austria"))
+    expect(family('Un piatto della cucina cinese')).toBe(family('Un piatto tipico della cucina romana'))
+    expect(family('Un animale che inizia con la C')).toBe(family('Una marca che inizia con la B'))
+    expect(family('Un frutto')).not.toBe(family('Un fiore'))
+    const prompts = ['Una città del Giappone', 'Una città della Spagna', 'Una città del Brasile', 'Un frutto', 'Un fiore', 'Un colore', 'Un mestiere']
+    const mixed = prompts.map((q) => compile({ ...fruit, q }))
+    for (let run = 0; run < 30; run++) {
+      const kinds = pickQuestions(mixed, {}, 5).map((question) => family(question.prompt))
+      expect(new Set(kinds).size).toBe(5)
+    }
+  })
+
   it('replaces an uploaded question with the same text', () => {
     const merged = mergeCustom([fruit], [{ ...fruit, c: ['pera'] }, { ...fruit, q: 'Altro' }])
     expect(merged).toMatchObject({ added: 1, replaced: 1 })
@@ -155,8 +168,9 @@ describe('built-in questions', () => {
   })
 
   it('build letter questions that keep the letter and the order of rarity', () => {
-    const fruit = derived.find((raw) => raw.q === 'Una cosa da mangiare che inizia con la M')!
-    expect(fruit.c[0]).toBe('mela')
+    const subjects = derived.map((raw) => raw.q.replace(/ che inizia con la \S+$/, ''))
+    expect(new Set(subjects).size).toBe(subjects.length)
+    expect(derived.length).toBeLessThanOrEqual(LETTER_GROUPS.length)
     for (const raw of derived) {
       const letter = raw.q.slice(-1).toLowerCase()
       const answers = TIERS.flatMap((tier) => raw[tier])
@@ -177,5 +191,27 @@ describe('suspense', () => {
     for (let i = 1; i < times.length; i++) expect(times[i]).toBeGreaterThan(times[i - 1]!)
     expect(times[0]).toBeGreaterThan(5000)
     expect(times[5]).toBeGreaterThan(9000)
+  })
+})
+
+describe('gaussian tiers', () => {
+  it('cuts answers along the normal curve, at least one per tier', async () => {
+    const { gaussianSizes } = await import('./bank')
+    expect(gaussianSizes(100)).toEqual([7, 24, 38, 24, 7])
+    expect(gaussianSizes(8)).toEqual([1, 2, 3, 1, 1])
+    for (const n of [5, 6, 13, 47, 151]) {
+      const sizes = gaussianSizes(n)
+      expect(sizes.reduce((a, b) => a + b, 0)).toBe(n)
+      expect(Math.min(...sizes)).toBeGreaterThanOrEqual(1)
+      expect(sizes[2]).toBe(Math.max(...sizes))
+    }
+  })
+
+  it('keeps the order of the answers', async () => {
+    const { gaussianTiers } = await import('./bank')
+    const answers = Array.from({ length: 20 }, (_, i) => `a${i}`)
+    const cut = gaussianTiers({ q: 'x', c: answers.slice(0, 2), n: answers.slice(2, 5), r: answers.slice(5, 9), e: answers.slice(9, 14), t: answers.slice(14) })
+    expect([...cut.c, ...cut.n, ...cut.r, ...cut.e, ...cut.t]).toEqual(answers)
+    expect(cut.c).toEqual(['a0'])
   })
 })

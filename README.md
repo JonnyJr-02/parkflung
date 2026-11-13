@@ -5,8 +5,11 @@ dal carro di legno fino alla casa di Ale a Varigotti. App per telefono (PWA), in
 
 - **Fasce di rarità:** morto di CACCA ADDOSSO ! (0), bada che storia (10), parata col petto (25),
   Shave like a Bomber! (50), Jonny 🍆 (75), Marco B. (100).
-- **Domande:** circa 730, in ordine casuale diverso per ogni telefono. Escono prima quelle mai giocate;
-  in Impostazioni si può scegliere se, finite quelle, devono ricapitare.
+- **Domande:** circa 700, di ogni genere, in ordine casuale diverso per ogni telefono. Escono prima
+  quelle mai giocate e mai due della stessa famiglia nella stessa partita (per esempio due «Una città
+  del…»); in Impostazioni si può scegliere se, finite quelle, devono ricapitare.
+- **Rarità a campana:** le risposte di ogni domanda, dalla più comune alla più rara, sono divise
+  come una gaussiana: circa 7% comuni, 24% non comuni, 38% rare, 24% esclusive, 7% top.
 - **Nuove domande:** Impostazioni → «Carica domande da file» (JSON o testo, c'è un file di esempio).
 
 ## Formato delle domande
@@ -17,8 +20,10 @@ dal carro di legno fino alla casa di Ale a Varigotti. App per telefono (PWA), in
 domanda :: comuni :: non comuni :: rare :: esclusive :: top
 ```
 
-Risposte separate da virgole; modi diversi di scrivere la stessa risposta separati da `/`.
-Le domande «… che inizia con la X» sono generate da quelle scritte (`src/game/bank.ts`).
+Risposte separate da virgole, dalla più comune alla più rara; modi diversi di scrivere la stessa
+risposta separati da `/`. La divisione in fasce la rifà il gioco con la curva a campana, quindi conta
+soprattutto l'ordine. Se una domanda compare in più file, le risposte si sommano (`pack-50-extra.txt`).
+Una sola domanda «… che inizia con la X» per argomento è generata da quelle scritte (`src/game/bank.ts`).
 
 ## Comandi
 
