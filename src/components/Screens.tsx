@@ -46,7 +46,7 @@ export function Home({ bank, onPlay, onSettings }: { bank: Question[]; onPlay: (
         <h1 className="title">
           Park<em>Flung</em>
         </h1>
-        <p className="lede">Cinque domande. Più la tua risposta è rara, più strada fai verso la casa gialla sul mare.</p>
+        <p className="lede">Cinque domande. Più la tua risposta è rara, più strada fai verso la casa di Ale&nbsp;a&nbsp;Varigotti.</p>
         <dl className="stats">
           <div>
             <dt>Partite</dt>

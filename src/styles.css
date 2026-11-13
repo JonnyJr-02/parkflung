@@ -582,6 +582,15 @@ button {
   max-width: 34ch;
 }
 
+/* Home: title, description and notes centred under the poster. */
+.home .home-body {
+  text-align: center;
+}
+
+.home .lede {
+  margin: 0 auto;
+}
+
 .note {
   color: var(--muted);
   font-size: 0.875rem;
