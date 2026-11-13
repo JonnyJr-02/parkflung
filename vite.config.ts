@@ -30,7 +30,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // The app asks before switching to a new version (src/components/UpdatePrompt.tsx).
+      registerType: 'prompt',
       includeManifestIcons: false,
       manifest: {
         id: base,
