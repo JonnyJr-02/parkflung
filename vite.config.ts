@@ -10,8 +10,8 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 // GitHub Pages serves the app from /<repository>/; the deploy workflow passes BASE_PATH.
 const base = process.env.BASE_PATH ?? '/parkflung/'
 
-// Sky colour at the top of the home screen: splash screen and browser chrome before the CSS loads.
-const SKY = '#8fd0f5'
+// Poster paper colour: splash screen and browser chrome before the CSS loads.
+const PAPER = '#f6ecd8'
 
 // GitHub Pages answers unknown paths with 404.html: a copy of the app there keeps any link working.
 function githubPagesFallback(): Plugin {
@@ -44,8 +44,8 @@ export default defineConfig({
         scope: base,
         display: 'standalone',
         orientation: 'portrait',
-        background_color: SKY,
-        theme_color: SKY,
+        background_color: PAPER,
+        theme_color: PAPER,
         icons: [
           { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },

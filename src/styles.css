@@ -71,8 +71,9 @@
   color-scheme: light dark;
 }
 
+/* Dark tokens: automatic with the phone's setting, or forced from Impostazioni (src/theme.ts). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #141c30;
     --surface: #1d2742;
     --ink: #f3e9d4;
@@ -112,6 +113,55 @@
     --p-stars: 0.85;
     --p-grain: 0.22;
   }
+}
+
+:root[data-theme='dark'] {
+  --bg: #141c30;
+  --surface: #1d2742;
+  --ink: #f3e9d4;
+  --edge: #05080f;
+  --muted: #b4b9c9;
+  --line: #34405f;
+  --primary: #f07a5c;
+  --primary-edge: #05080f;
+  --teal: #5cc2c7;
+  --danger: #ff6b5e;
+  --danger-edge: #05080f;
+
+  --tier-miss: #c98d55;
+  --tier-c: #a9b3bf;
+  --tier-n: #5fd083;
+  --tier-r: #ff6b62;
+  --tier-e: #c08cff;
+  --tier-t: #f2c230;
+
+  --p-sky-1: #0f1730;
+  --p-sky-2: #23315a;
+  --p-sky-3: #4a4f78;
+  --p-sun: #f3e6c4;
+  --p-sea: #123f4a;
+  --p-shine: #f3e6c4;
+  --p-wave: #2f6f74;
+  --p-head: #4d6233;
+  --p-wall: #d9a93e;
+  --p-window: #ffd86b;
+  --p-hill-1: #43572b;
+  --p-hill-2: #364a22;
+  --p-hill-3: #2a3b1a;
+  --p-hill-4: #213016;
+  --p-trail: #cdbd98;
+  --p-dash: #a99a74;
+  --p-palm: #141d14;
+  --p-stars: 0.85;
+  --p-grain: 0.22;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 
@@ -1615,4 +1665,42 @@ button {
   0% { opacity: 0; transform: translate(-50%, 16px); }
   12%, 85% { opacity: 1; transform: translate(-50%, 0); }
   100% { opacity: 0; transform: translate(-50%, 8px); }
+}
+
+/* ---------- Settings controls ---------- */
+
+.link.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: -6px;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  overflow: hidden;
+  border: 2px solid var(--edge);
+  border-radius: 999px;
+  box-shadow: 0 3px 0 var(--edge);
+}
+
+.segmented button {
+  min-height: 46px;
+  border: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.segmented button + button {
+  border-left: 2px solid var(--edge);
+}
+
+.segmented button.on {
+  background: var(--primary);
+  color: #ffffff;
 }

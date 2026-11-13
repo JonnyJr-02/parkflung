@@ -4,6 +4,7 @@ import { parseUpload, type Question } from '../game/parse'
 import { summarize, update, useSavedState } from '../game/store'
 import { MAX_SCORE, OUTCOMES, QUESTIONS_PER_GAME, STOPS, stopsReached, TIER_INFO, TIERS } from '../game/tiers'
 import type { Result } from './Game'
+import { useThemePref, type ThemePref } from '../theme'
 import { Scene } from './Scene'
 
 function GearIcon() {
@@ -164,12 +165,19 @@ const EXAMPLE = {
   ],
 }
 
+const THEMES: Array<[ThemePref, string]> = [
+  ['auto', 'Automatico'],
+  ['light', 'Chiaro'],
+  ['dark', 'Scuro'],
+]
+
 export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => void }) {
   const saved = useSavedState()
   const fileRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState<{ text: string; problems: string[] } | null>(null)
   const [confirming, setConfirming] = useState<'reset' | 'remove' | null>(null)
   const played = bank.length - countFresh(bank, saved.seen)
+  const [theme, setTheme] = useThemePref()
 
   async function onFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -211,12 +219,40 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
   return (
     <main className="screen settings">
       <header className="game-top">
-        <button type="button" className="link" onClick={onBack}>
+        <button type="button" className="link back" onClick={onBack}>
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 5 L8 12 L15 19" />
+          </svg>
           Indietro
         </button>
         <p className="game-count">Impostazioni</p>
         <span />
       </header>
+
+      <section className="panel">
+        <h2>Aspetto</h2>
+        <div className="segmented" role="radiogroup" aria-label="Tema">
+          {THEMES.map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={theme === value}
+              className={theme === value ? 'on' : ''}
+              onClick={() => setTheme(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="note">
+          {theme === 'auto'
+            ? 'Segue il tema del telefono: chiaro di giorno, scuro quando il telefono è in modalità scura.'
+            : theme === 'light'
+              ? 'Sempre chiaro: il manifesto al tramonto.'
+              : 'Sempre scuro: il manifesto di notte.'}
+        </p>
+      </section>
 
       <section className="panel">
         <h2>Domande</h2>
