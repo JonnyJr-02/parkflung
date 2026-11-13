@@ -84,6 +84,67 @@ function destination(score: number): string {
   return `Hai superato la tappa ${reached} di ${STOPS.length}.`
 }
 
+/** From the rarest down, so the surprising answers come first. */
+const TIERS_RAREST_FIRST = [...TIERS].reverse()
+
+function ResultCard({ result, number }: { result: Result; number: number }) {
+  const [open, setOpen] = useState(false)
+  const panelId = `answers-${result.question.id}`
+  return (
+    <li className={`result tier-${result.outcome}`}>
+      <div className="result-row">
+        <span className="result-number">{number}</span>
+        <span className="result-main">
+          <span className="result-prompt">{result.question.prompt}</span>
+          <span className="result-answer">
+            {result.answer ? result.answer.label : result.typed ? `«${result.typed}»` : 'Passata'}
+          </span>
+        </span>
+        <span className="result-tier">
+          <span className="chip">{TIER_INFO[result.outcome].label}</span>
+          <span className="result-points">+{TIER_INFO[result.outcome].points}</span>
+        </span>
+      </div>
+      <button
+        type="button"
+        className={open ? 'answers-toggle open' : 'answers-toggle'}
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((current) => !current)}
+      >
+        {open ? 'Nascondi le risposte' : `Vedi le ${result.question.answers.length} risposte possibili`}
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 9 L12 15 L18 9" />
+        </svg>
+      </button>
+      {open && (
+        <div className="answers" id={panelId}>
+          {TIERS_RAREST_FIRST.map((tier) => {
+            const answers = result.question.answers.filter((answer) => answer.tier === tier)
+            if (answers.length === 0) return null
+            return (
+              <section key={tier} className={`answers-tier tier-${tier}`}>
+                <h3 className="answers-head">
+                  <span className="chip">{TIER_INFO[tier].label}</span>
+                  <span className="answers-points">+{TIER_INFO[tier].points}</span>
+                  <span className="answers-count">{answers.length}</span>
+                </h3>
+                <ul className="answers-list">
+                  {answers.map((answer) => (
+                    <li key={answer.label} className={answer === result.answer ? 'answer mine' : 'answer'}>
+                      {answer.label}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )
+          })}
+        </div>
+      )}
+    </li>
+  )
+}
+
 export function Summary({ results, onAgain, onHome }: { results: Result[]; onAgain: () => void; onHome: () => void }) {
   const score = results.reduce((sum, result) => sum + TIER_INFO[result.outcome].points, 0)
   // Start at the cart, then walk: the scene animates whenever its points change.
@@ -108,37 +169,9 @@ export function Summary({ results, onAgain, onHome }: { results: Result[]; onAga
         <h1 className="destination">{destination(score)}</h1>
         <ol className="results">
           {results.map((result, index) => (
-            <li key={result.question.id} className={`result tier-${result.outcome}`}>
-              <details>
-                <summary>
-                  <span className="result-number">{index + 1}</span>
-                  <span className="result-main">
-                    <span className="result-prompt">{result.question.prompt}</span>
-                    <span className="result-answer">
-                      {result.answer ? result.answer.label : result.typed ? `«${result.typed}»` : 'Passata'}
-                    </span>
-                  </span>
-                  <span className="result-tier">
-                    <span className="chip">{TIER_INFO[result.outcome].label}</span>
-                    <span className="result-points">+{TIER_INFO[result.outcome].points}</span>
-                  </span>
-                </summary>
-                <div className="all-answers">
-                  {TIERS.map((tier) => (
-                    <p key={tier} className={`tier-${tier}`}>
-                      <span className="chip">{TIER_INFO[tier].label}</span>{' '}
-                      {result.question.answers
-                        .filter((answer) => answer.tier === tier)
-                        .map((answer) => answer.label)
-                        .join(', ')}
-                    </p>
-                  ))}
-                </div>
-              </details>
-            </li>
+            <ResultCard key={result.question.id} result={result} number={index + 1} />
           ))}
         </ol>
-        <p className="note">Tocca una domanda per vedere tutte le risposte possibili.</p>
         <button type="button" className="btn" onClick={onAgain}>
           Gioca ancora
         </button>

@@ -1214,18 +1214,12 @@ button {
   border-top: 2px dashed var(--line);
 }
 
-.result summary {
+.result-row {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 10px;
   align-items: center;
-  padding: 12px 14px;
-  list-style: none;
-  cursor: pointer;
-}
-
-.result summary::-webkit-details-marker {
-  display: none;
+  padding: 12px 14px 4px;
 }
 
 .result-number {
@@ -1270,14 +1264,83 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
-.all-answers {
+.answers-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: calc(100% - 28px);
+  min-height: 40px;
+  margin: 6px 14px 12px;
+  border: 2px dashed var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.answers-toggle svg {
+  transition: transform 200ms var(--ease-out);
+}
+
+.answers-toggle.open svg {
+  transform: rotate(180deg);
+}
+
+.answers {
   display: flex;
   flex-direction: column;
+  gap: 14px;
+  padding: 0 14px 16px;
+  animation: rise 260ms var(--ease-out) both;
+}
+
+.answers-head {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  padding: 0 14px 14px;
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.answers-points {
+  font-weight: 700;
+}
+
+.answers-count {
+  margin-left: auto;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.answers-count::after {
+  content: ' risposte';
+}
+
+.answers-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.answer {
+  padding: 3px 9px;
+  border: 1.5px solid color-mix(in srgb, var(--tier) 45%, transparent);
+  border-radius: 999px;
+  color: var(--ink);
   font-size: 0.85rem;
   overflow-wrap: anywhere;
 }
+
+.answer.mine {
+  border-color: var(--tier);
+  background: var(--tier);
+  color: #ffffff;
+  font-weight: 700;
+}
+
 
 /* ---------- Settings ---------- */
 
