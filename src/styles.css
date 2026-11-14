@@ -3333,3 +3333,16 @@ button {
     animation: none;
   }
 }
+
+/* Without hardcore: an answer that is not on the list asks to try again. */
+.not-found {
+  padding: 8px 12px;
+  border: 2px solid var(--edge);
+  border-radius: var(--radius-m);
+  background: #ffe1db;
+  color: #1d2a44;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-align: center;
+  animation: shake 360ms ease;
+}

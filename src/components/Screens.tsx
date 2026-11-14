@@ -4,7 +4,7 @@ import { parseUpload, type Question } from '../game/parse'
 import { TIMER_CHOICES, timerLabel } from '../game/timer'
 import { update, useSavedState } from '../game/store'
 import { halfway, prizeInfo, rulesFor } from '../game/surprise'
-import { maxQuestions, OUTCOMES, TARGETS, TIER_INFO, TIERS, worldOf, WORLDS } from '../game/tiers'
+import { ladderFor, maxQuestions, TARGETS, TIER_INFO, TIERS, worldOf, WORLDS } from '../game/tiers'
 import type { Result } from './Game'
 import { Scene } from './Scene'
 
@@ -43,7 +43,8 @@ export function Home({
   const fresh = countFresh(bank, saved.seen)
   const canStart = saved.repeat || fresh > 0
   const gameScore = game ? game.results.reduce((sum, result) => sum + TIER_INFO[result.outcome].points, 0) : 0
-  const rules = rulesFor(target, game?.surprise)
+  const hardcore = game ? (game.hardcore ?? true) : saved.hardcore
+  const rules = rulesFor(target, game?.surprise, hardcore)
   const world = game ? worldOf(gameScore, rules.goal) : 4
   const prize = game?.surprise?.prize
   const [confirmNew, setConfirmNew] = useState(false)
@@ -68,7 +69,8 @@ export function Home({
         </h1>
         <p className="lede">
           Una domanda dopo l'altra: più la risposta è rara, più strada fai. Arrivi alla casa di Ale&nbsp;a&nbsp;Varigotti a{' '}
-          {target}&nbsp;punti, se ce la fai in {maxQuestions(target)}&nbsp;domande.
+          {target}&nbsp;punti, se ce la fai in {rules.limit}&nbsp;domande.
+          {hardcore ? ' Modalità hardcore.' : ''}
         </p>
         <div className="target-choice">
           <p className="target-label" id="target-label">
@@ -89,7 +91,7 @@ export function Home({
             ))}
           </div>
           <p className="note">
-            Al massimo {maxQuestions(saved.target)} domande. Cinque mondi lungo il sentiero, uno ogni {saved.target / 5} punti: temporale,
+            Al massimo {maxQuestions(saved.target, saved.hardcore)} domande{saved.hardcore ? ' (hardcore)' : ''}. Cinque mondi lungo il sentiero, uno ogni {saved.target / 5} punti: temporale,
             pioggerella, nuvole e sole, sole e tramonto.
           </p>
         </div>
@@ -131,7 +133,7 @@ export function Home({
 /** From the rarest down, so the surprising answers come first. */
 const TIERS_RAREST_FIRST = [...TIERS].reverse()
 
-function ResultCard({ result, number }: { result: Result; number: number }) {
+function ResultCard({ result, number, hardcore }: { result: Result; number: number; hardcore: boolean }) {
   const [open, setOpen] = useState(false)
   const panelId = `answers-${result.question.id}`
   return (
@@ -146,7 +148,7 @@ function ResultCard({ result, number }: { result: Result; number: number }) {
           </span>
         </span>
         <span className="result-tier">
-          <span className="chip">{TIER_INFO[result.outcome].label}</span>
+          <span className="chip">{result.timedOut && !hardcore ? 'Tempo scaduto' : TIER_INFO[result.outcome].label}</span>
           <span className="result-points">+{TIER_INFO[result.outcome].points}</span>
         </span>
       </div>
@@ -193,11 +195,13 @@ function ResultCard({ result, number }: { result: Result; number: number }) {
 export function Summary({
   results,
   target,
+  hardcore,
   onAgain,
   onHome,
 }: {
   results: Result[]
   target: number
+  hardcore: boolean
   onAgain: () => void
   onHome: () => void
 }) {
@@ -233,7 +237,7 @@ export function Summary({
         <p className="note">Sotto ogni domanda puoi aprire tutte le sue risposte possibili, fascia per fascia.</p>
         <ol className="results">
           {results.map((result, index) => (
-            <ResultCard key={`${result.question.id}-${index}`} result={result} number={index + 1} />
+            <ResultCard key={`${result.question.id}-${index}`} result={result} number={index + 1} hardcore={hardcore} />
           ))}
         </ol>
         <button type="button" className="btn" onClick={onAgain}>
@@ -320,13 +324,39 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
       </header>
 
       <section className="panel">
+        <h2>Modalità</h2>
+        <label className="switch-row">
+          <span className="switch-text">
+            <span className="switch-title">Modalità hardcore</span>
+            <span className="note">
+              {saved.hardcore
+                ? `Attiva: c'è anche «${TIER_INFO.miss.label}» (0 punti), si può passare la domanda e una risposta che non è tra quelle valide vale 0 punti. Partita a 500 punti in ${maxQuestions(500, true)} domande, a 1000 punti in ${maxQuestions(1000, true)}.`
+                : `Spenta: non c'è «${TIER_INFO.miss.label}». Se scrivi una risposta che non è tra quelle valide te lo dico e riprovi finché ne trovi una giusta; non si può passare. Per questo le domande sono il 25% in meno: ${maxQuestions(500, false)} invece di ${maxQuestions(500, true)} a 500 punti, ${maxQuestions(1000, false)} invece di ${maxQuestions(1000, true)} a 1000 punti.`}
+              {saved.current ? ' Vale dalla prossima partita.' : ''}
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label="Modalità hardcore"
+            className="switch"
+            checked={saved.hardcore}
+            onChange={(event) => {
+              const hardcore = event.target.checked
+              update((current) => ({ ...current, hardcore }))
+            }}
+          />
+        </label>
+      </section>
+
+      <section className="panel">
         <h2>Timer</h2>
         <label className="switch-row">
           <span className="switch-text">
             <span className="switch-title">Timer per ogni domanda</span>
             <span className="note">
               {saved.timerOn
-                ? `Hai ${timerLabel(saved.timerSeconds)} per ogni domanda. Se il tempo finisce, quella domanda conta come «${TIER_INFO.miss.label}».`
+                ? `Hai ${timerLabel(saved.timerSeconds)} per ogni domanda. Se il tempo finisce, quella domanda ${saved.hardcore ? `conta come «${TIER_INFO.miss.label}»` : 'vale 0 punti'}.`
                 : 'Nessuna fretta: pensa quanto vuoi.'}
             </span>
           </span>
@@ -437,7 +467,7 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
       <section className="panel">
         <h2>Punti</h2>
         <ul className="legend">
-          {OUTCOMES.map((outcome) => (
+          {ladderFor(saved.hardcore).map((outcome) => (
             <li key={outcome} className={`tier-${outcome}`}>
               <span className="chip">{TIER_INFO[outcome].label}</span>
               <span className="legend-rarity">{TIER_INFO[outcome].rarity}</span>

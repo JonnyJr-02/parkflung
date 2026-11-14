@@ -54,19 +54,24 @@ export interface Rules {
   card: boolean
 }
 
-/** The rules of a game: the house at `target` in 20 or 40 questions, changed by the wheel. */
-export function rulesFor(target: number, surprise?: Surprise | null): Rules {
+/** The rules of a game: the house at `target` in 20 or 40 questions (15 or 30 without hardcore), changed by the wheel. */
+export function rulesFor(target: number, surprise?: Surprise | null, hardcore = true): Rules {
   const prize = surprise?.prize ?? null
   return {
     goal: target + (prize === 'goal-up' ? 100 : prize === 'goal-down' ? -100 : 0),
-    limit: maxQuestions(target) + (prize === 'questions-up' ? 3 : prize === 'questions-down' ? -3 : 0),
+    limit: maxQuestions(target, hardcore) + (prize === 'questions-up' ? 3 : prize === 'questions-down' ? -3 : 0),
     card: prize === 'card',
   }
 }
 
+/** The rarity the Carta Rivincita lets you answer again after: the lowest one the game has. */
+export function cardLabel(hardcore: boolean): string {
+  return hardcore ? '«morto di CACCA ADDOSSO !»' : '«bada che storia»'
+}
+
 /** What the prize means now, in one sentence. */
-export function prizeNote(prize: Prize, target: number): string {
-  const { goal, limit } = rulesFor(target, { prize })
+export function prizeNote(prize: Prize, target: number, hardcore = true): string {
+  const { goal, limit } = rulesFor(target, { prize }, hardcore)
   switch (prize) {
     case 'goal-up':
     case 'goal-down':
@@ -75,6 +80,6 @@ export function prizeNote(prize: Prize, target: number): string {
     case 'questions-down':
       return `Ora la partita ha ${limit} domande in tutto.`
     case 'card':
-      return 'Per tutta la partita: se fai «morto di CACCA ADDOSSO !» puoi rispondere di nuovo alla stessa domanda, una volta per domanda.'
+      return `Per tutta la partita: se fai ${cardLabel(hardcore)} puoi rispondere di nuovo alla stessa domanda, una volta per domanda.`
   }
 }

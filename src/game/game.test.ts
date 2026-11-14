@@ -280,6 +280,9 @@ describe('a game until the house', () => {
   it('ends after 20 questions at 500 points and 40 at 1000, with an ending for each world', async () => {
     expect(maxQuestions(500)).toBe(20)
     expect(maxQuestions(1000)).toBe(40)
+    // Without hardcore there are no misses, and a quarter fewer questions.
+    expect(maxQuestions(500, false)).toBe(15)
+    expect(maxQuestions(1000, false)).toBe(30)
     const { GAME_OVER } = await import('../components/GameOver')
     expect(GAME_OVER).toHaveLength(WORLDS.length)
   })
@@ -294,6 +297,11 @@ describe('a game until the house', () => {
     expect(rulesFor(1000, { prize: 'questions-up' }).limit).toBe(43)
     expect(rulesFor(1000, { prize: 'questions-down' }).limit).toBe(37)
     expect(rulesFor(500, { prize: 'card' }).card).toBe(true)
+    expect(rulesFor(500, { prize: 'questions-up' }, false).limit).toBe(18)
+    expect(rulesFor(1000, undefined, false)).toEqual({ goal: 1000, limit: 30, card: false })
+    const { ladderFor } = await import('./tiers')
+    expect(ladderFor(true)[0]).toBe('miss')
+    expect(ladderFor(false)).toEqual(['c', 'n', 'r', 'e', 't'])
     expect(PRIZES.map((prize) => prize.kind).sort()).toEqual(['bonus', 'bonus', 'gold', 'malus', 'malus'])
     // Each slice is as likely as the others.
     const counts = new Map<string, number>()

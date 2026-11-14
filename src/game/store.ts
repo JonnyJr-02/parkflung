@@ -39,6 +39,8 @@ export interface SavedGame {
   surprise?: Surprise
   /** The question on screen already answered once more with the Carta Rivincita. */
   retried?: string
+  /** Played in hardcore mode (with misses). Missing in games saved before the mode existed: those were hardcore. */
+  hardcore?: boolean
 }
 
 export interface SavedState {
@@ -55,6 +57,8 @@ export interface SavedState {
   timerSeconds: TimerSeconds
   /** Points to reach the house in a new game. */
   target: Target
+  /** Hardcore mode for new games: misses, passing, and 20 or 40 questions. Off by default. */
+  hardcore: boolean
   current: SavedGame | null
 }
 
@@ -68,6 +72,7 @@ const EMPTY: SavedState = {
   timerOn: false,
   timerSeconds: DEFAULT_TIMER,
   target: DEFAULT_TARGET,
+  hardcore: false,
   current: null,
 }
 
@@ -84,6 +89,7 @@ function read(): SavedState {
       timerOn: data.timerOn === true,
       timerSeconds: isTimerSeconds(data.timerSeconds) ? data.timerSeconds : DEFAULT_TIMER,
       target: isTarget(data.target) ? data.target : DEFAULT_TARGET,
+      hardcore: data.hardcore === true,
       current: readGame(data.current),
     }
   } catch {
@@ -102,6 +108,7 @@ function readGame(value: unknown): SavedGame | null {
     pending: typeof game.pending === 'string' ? game.pending : undefined,
     surprise: readSurprise(game.surprise),
     retried: typeof game.retried === 'string' ? game.retried : undefined,
+    hardcore: typeof game.hardcore === 'boolean' ? game.hardcore : undefined,
   }
 }
 

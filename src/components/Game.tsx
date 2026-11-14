@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 
 import { matchAnswer, type Answer } from '../game/match'
 import type { Question } from '../game/parse'
 import { markSeen } from '../game/store'
-import { halfway, rulesFor, type Surprise } from '../game/surprise'
-import { stopsFor, TIER_INFO, worldOf, WORLDS, type Outcome } from '../game/tiers'
+import { cardLabel, halfway, rulesFor, type Surprise } from '../game/surprise'
+import { ladderFor, stopsFor, TIER_INFO, worldOf, WORLDS, type Outcome } from '../game/tiers'
 import { Farflung } from './Farflung'
 import { RarityMeter } from './RarityMeter'
 import { SecondChance, SurpriseSquare } from './Surprise'
@@ -90,6 +90,7 @@ export function scoreOf(results: readonly Result[]): number {
  */
 export function Game({
   target,
+  hardcore,
   timer,
   start,
   nextQuestion,
@@ -98,6 +99,11 @@ export function Game({
   onQuit,
 }: {
   target: number
+  /**
+   * Hardcore: misses exist and you can pass. Without it there are no misses: an answer that is not
+   * listed asks you to try again, and a question whose time runs out is worth 0 points.
+   */
+  hardcore: boolean
   /** Seconds for each question, 0 for no timer. */
   timer: number
   /** What was already answered (when picking up a saved game), the question to show now and the "?" square. */
@@ -114,6 +120,10 @@ export function Game({
   const [surprise, setSurprise] = useState<Surprise | undefined>(start.surprise)
   /** The question on screen, once the Carta Rivincita was used on it. */
   const [retried, setRetried] = useState<string | undefined>(start.retried)
+  /** The answer that the Carta Rivincita is trying to beat: kept if time runs out on the second try. */
+  const [firstTry, setFirstTry] = useState<Result | undefined>(undefined)
+  /** Without hardcore: the last answer typed that is not on the list. */
+  const [notFound, setNotFound] = useState<string | null>(null)
   // Picked up past the "?" square without having met it (left during the choice): it comes first.
   const [phase, setPhase] = useState<Phase>(() =>
     !start.surprise && scoreOf(start.results) >= halfway(target) && scoreOf(start.results) < target
@@ -125,7 +135,8 @@ export function Game({
 
   const score = scoreOf(results)
   const last = results[results.length - 1]
-  const { goal, limit, card } = rulesFor(target, surprise)
+  const { goal, limit, card } = rulesFor(target, surprise, hardcore)
+  const ladder = ladderFor(hardcore)
   const half = halfway(target)
   const arrived = score >= goal
   /** The game is over after this answer: the house is reached or that was the last question. */
@@ -149,22 +160,28 @@ export function Game({
     setPhase({ kind: 'suspense', result: { question, typed: typed.trim(), outcome, answer, retried: secondTry || undefined } })
   }
 
-  /** Time is up on this question: whatever was typed, it is a miss. */
+  /**
+   * Time is up on this question: whatever was typed, it is a miss in hardcore. Without hardcore it
+   * is worth 0 points, straight to the recap (or the answer the card was trying to beat stays).
+   */
   function timeUp() {
     if (phase.kind !== 'ask' && phase.kind !== 'confirm') return
     markSeen([question.id])
     inputRef.current?.blur()
-    setPhase({ kind: 'suspense', result: { question, typed: '', outcome: 'miss', timedOut: true, retried: secondTry || undefined } })
+    const result: Result = { question, typed: '', outcome: 'miss', timedOut: true, retried: secondTry || undefined }
+    if (hardcore) setPhase({ kind: 'suspense', result })
+    else commit(secondTry && firstTry ? { ...firstTry, retried: true } : result)
   }
 
-  /** The meter has stopped: Marco B. gets its party, a miss can be answered again with the card. */
+  /** The meter has stopped: Marco B. gets its party, the lowest rarity can be answered again with the card. */
   function afterMeter(result: Result) {
     if (result.outcome === 't') setPhase({ kind: 'celebrate', result })
-    else if (result.outcome === 'miss' && card && !secondTry) setPhase({ kind: 'second', result })
+    else if (result.outcome === ladder[0] && card && !secondTry) setPhase({ kind: 'second', result })
     else commit(result)
   }
 
-  function retry() {
+  function retry(first: Result) {
+    setFirstTry(first)
     setRetried(question.id)
     onSave(results, question, { surprise, retried: question.id })
     setTyped('')
@@ -189,6 +206,7 @@ export function Game({
   }
 
   function commit(result: Result) {
+    setFirstTry(undefined)
     const now = [...results, result]
     setResults(now)
     onSave(now, null, { surprise, retried: undefined })
@@ -202,7 +220,12 @@ export function Game({
     const match = matchAnswer(typed, question.answers)
     if (match.kind === 'exact') startSuspense(match.answer.tier, match.answer)
     else if (match.kind === 'suggest') setPhase({ kind: 'confirm', answer: match.answer })
-    else startSuspense('miss')
+    else if (hardcore) startSuspense('miss')
+    else {
+      // No misses without hardcore: say so and let the player try again.
+      setNotFound(typed.trim())
+      inputRef.current?.select()
+    }
   }
 
   function next() {
@@ -215,6 +238,7 @@ export function Game({
     onSave(results, upcoming, { surprise, retried: undefined })
     setQuestion(upcoming)
     setTyped('')
+    setNotFound(null)
     setPhase({ kind: 'ask' })
   }
 
@@ -243,7 +267,7 @@ export function Game({
 
       <Track score={score} target={goal} surprise={{ at: half, used: !!surprise }} />
       {card && (
-        <p className="card-badge" title="Dopo un «morto di CACCA ADDOSSO !» puoi rispondere di nuovo, una volta per domanda">
+        <p className="card-badge" title={`Dopo ${cardLabel(hardcore)} puoi rispondere di nuovo, una volta per domanda`}>
           🃏 Carta Rivincita
         </p>
       )}
@@ -262,7 +286,10 @@ export function Game({
                 ref={inputRef}
                 className="answer-input"
                 value={typed}
-                onChange={(event) => setTyped(event.target.value)}
+                onChange={(event) => {
+                  setTyped(event.target.value)
+                  setNotFound(null)
+                }}
                 placeholder="Scrivi una risposta"
                 autoComplete="off"
                 autoCapitalize="none"
@@ -275,9 +302,16 @@ export function Game({
               <button type="submit" className="btn" disabled={!typed.trim() || phase.kind === 'confirm'}>
                 Invia
               </button>
-              <button type="button" className="link pass" onClick={() => startSuspense('miss')} disabled={phase.kind === 'confirm'}>
-                Non mi viene niente, passo
-              </button>
+              {notFound && (
+                <p className="not-found" role="alert">
+                  «{notFound}» non c'è tra le risposte: riprova!
+                </p>
+              )}
+              {hardcore && (
+                <button type="button" className="link pass" onClick={() => startSuspense('miss')} disabled={phase.kind === 'confirm'}>
+                  Non mi viene niente, passo
+                </button>
+              )}
             </form>
           </div>
         )}
@@ -286,6 +320,7 @@ export function Game({
           <RarityMeter
             key={question.id}
             outcome={phase.result.outcome}
+            ladder={ladder}
             typed={phase.result.answer?.label ?? phase.result.typed}
             onDone={() => afterMeter(phase.result)}
           />
@@ -295,10 +330,12 @@ export function Game({
           <section className={`reveal tier-${last.outcome}`} aria-live="polite">
             <WeatherStrip world={world} arrived={arrived} />
             <p className="reveal-prompt">{last.question.prompt}</p>
-            <p className="reveal-label">{TIER_INFO[last.outcome].label}</p>
+            <p className="reveal-label">{last.timedOut && !hardcore ? 'Tempo scaduto' : TIER_INFO[last.outcome].label}</p>
             <p className="reveal-answer">
               {last.timedOut
-                ? 'Tempo scaduto!'
+                ? hardcore
+                  ? 'Tempo scaduto!'
+                  : 'Questa domanda vale 0 punti'
                 : last.answer
                   ? last.answer.label
                   : last.typed
@@ -355,6 +392,7 @@ export function Game({
       {phase.kind === 'surprise' && (
         <SurpriseSquare
           target={target}
+          hardcore={hardcore}
           onSkip={() => {
             meetSurprise(null, phase.then)
             setPhase({ kind: phase.then })
@@ -364,7 +402,7 @@ export function Game({
         />
       )}
 
-      {phase.kind === 'second' && <SecondChance prompt={question.prompt} onRetry={retry} onKeep={() => commit(phase.result)} />}
+      {phase.kind === 'second' && <SecondChance prompt={question.prompt} hardcore={hardcore} onRetry={() => retry(phase.result)} onKeep={() => commit(phase.result)} />}
     </main>
   )
 }

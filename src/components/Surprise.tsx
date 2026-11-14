@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { prizeInfo, prizeNote, PRIZES, spinPrize, type Prize } from '../game/surprise'
+import { cardLabel, prizeInfo, prizeNote, PRIZES, spinPrize, type Prize } from '../game/surprise'
 import { prefersReducedMotion } from './Finale'
 
 const SLICE = 360 / PRIZES.length
@@ -66,12 +66,15 @@ function WheelArt({ turn, spinning }: { turn: number; spinning: boolean }) {
  */
 export function SurpriseSquare({
   target,
+  hardcore = true,
   onSkip,
   onPrize,
   onDone,
 }: {
   /** Points of the house when the game started: the prizes are told against it. */
   target: number
+  /** Hardcore game: the card works after a miss; otherwise after «bada che storia». */
+  hardcore?: boolean
   onSkip: () => void
   /** The wheel was spun: the prize is known (and saved) before it stops. */
   onPrize: (prize: Prize) => void
@@ -164,7 +167,7 @@ export function SurpriseSquare({
             </p>
           )}
           <h2 className="prize-title">{info.title}</h2>
-          <p className="prize-note">{prizeNote(prize, target)}</p>
+          <p className="prize-note">{prizeNote(prize, target, hardcore)}</p>
           <button ref={doneRef} type="button" className="btn" onClick={onDone}>
             Continua
           </button>
@@ -174,8 +177,18 @@ export function SurpriseSquare({
   )
 }
 
-/** After a miss, with the Carta Rivincita in hand: answer the same question once more, or not. */
-export function SecondChance({ prompt, onRetry, onKeep }: { prompt: string; onRetry: () => void; onKeep: () => void }) {
+/** After the lowest rarity, with the Carta Rivincita in hand: answer the same question once more, or not. */
+export function SecondChance({
+  prompt,
+  hardcore = true,
+  onRetry,
+  onKeep,
+}: {
+  prompt: string
+  hardcore?: boolean
+  onRetry: () => void
+  onKeep: () => void
+}) {
   const retryRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     retryRef.current?.focus({ preventScroll: true })
@@ -188,9 +201,12 @@ export function SecondChance({ prompt, onRetry, onKeep }: { prompt: string; onRe
         <small>Carta Rivincita</small>
       </div>
       <h1 id="second-title" className="surprise-title">
-        Morto di CACCA ADDOSSO… ma hai la carta!
+        {hardcore ? 'Morto di CACCA ADDOSSO…' : 'Bada che storia…'} ma hai la carta!
       </h1>
-      <p className="surprise-sub">Puoi rispondere di nuovo a «{prompt}». Una volta sola per questa domanda.</p>
+      <p className="surprise-sub">
+        Puoi rispondere di nuovo a «{prompt}» e tentare una risposta più rara. Una volta sola per questa domanda (vale dopo{' '}
+        {cardLabel(hardcore)}).
+      </p>
       <button ref={retryRef} type="button" className="btn second-retry" onClick={onRetry}>
         Rispondi di nuovo
       </button>

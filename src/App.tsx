@@ -18,13 +18,14 @@ type View =
       name: 'game'
       id: number
       target: Target
+      hardcore: boolean
       timer: number
       start: { results: Result[]; question: Question; surprise?: Surprise; retried?: string }
     }
   /** The end of a game, then the summary: the arrival at the house of Ale, or the questions run out. */
   /** `target` is the points the house was at in the end, after the wheel of fortune. */
-  | { name: 'finale'; results: Result[]; target: number }
-  | { name: 'summary'; results: Result[]; target: number }
+  | { name: 'finale'; results: Result[]; target: number; hardcore: boolean }
+  | { name: 'summary'; results: Result[]; target: number; hardcore: boolean }
   /** Development only: one world-completed show on its own. */
   | { name: 'world'; world: number }
   /** Development only: the "?" square and its wheel on their own. */
@@ -63,14 +64,14 @@ function firstView(): View {
       left -= TIER_INFO[outcome].points
       return { question: { id: `prova-${i}`, prompt: `Domanda di prova ${i + 1}`, answers: [] }, typed: 'prova', outcome }
     })
-    return { name: 'finale', results, target: DEFAULT_TARGET }
+    return { name: 'finale', results, target: DEFAULT_TARGET, hardcore: true }
   }
   const results: Result[] = Array.from({ length: 7 }, (_, i) => ({
     question: { id: `prova-${i}`, prompt: `Domanda di prova ${i + 1}`, answers: [] },
     typed: '',
     outcome: i % 2 ? 't' : 'e',
   }))
-  return { name: 'finale', results, target: DEFAULT_TARGET }
+  return { name: 'finale', results, target: DEFAULT_TARGET, hardcore: true }
 }
 
 export function App() {
@@ -100,10 +101,12 @@ export function App() {
   function open(game: SavedGame) {
     const { timerOn, timerSeconds } = getState()
     const results = game.results.map(toResult)
+    // Games saved before the mode existed had misses: they go on as hardcore.
+    const hardcore = game.hardcore ?? true
     // A game saved when it was already over (all its questions played) goes straight to its ending.
-    const { goal, limit } = rulesFor(game.target, game.surprise)
+    const { goal, limit } = rulesFor(game.target, game.surprise, hardcore)
     if (results.length >= limit || scoreOf(results) >= goal) {
-      finish(game.target, results, goal)
+      finish(game.target, results, goal, hardcore)
       return
     }
     const pending = game.pending ? byId.get(game.pending) : undefined
@@ -116,13 +119,15 @@ export function App() {
       name: 'game',
       id: Date.now(),
       target: game.target,
+      hardcore,
       timer: timerOn ? timerSeconds : 0,
       start: { results, question, surprise: game.surprise, retried },
     })
   }
 
   function newGame() {
-    open({ target: getState().target, startedAt: Date.now(), results: [] })
+    const { target, hardcore } = getState()
+    open({ target, hardcore, startedAt: Date.now(), results: [] })
   }
 
   function play() {
@@ -131,9 +136,16 @@ export function App() {
     else newGame()
   }
 
-  function save(target: Target, results: Result[], onScreen: Question | null, extra: { surprise?: Surprise; retried?: string }) {
+  function save(
+    target: Target,
+    hardcore: boolean,
+    results: Result[],
+    onScreen: Question | null,
+    extra: { surprise?: Surprise; retried?: string },
+  ) {
     saveGame({
       target,
+      hardcore,
       startedAt: getState().current?.startedAt ?? Date.now(),
       results: results.map(toSaved),
       pending: onScreen?.id,
@@ -142,7 +154,7 @@ export function App() {
     })
   }
 
-  function finish(target: Target, results: Result[], goal: number) {
+  function finish(target: Target, results: Result[], goal: number, hardcore: boolean) {
     recordGame({
       at: Date.now(),
       score: scoreOf(results),
@@ -151,7 +163,7 @@ export function App() {
       questions: results.length,
     })
     saveGame(null)
-    setView({ name: 'finale', results, target: goal })
+    setView({ name: 'finale', results, target: goal, hardcore })
   }
 
   switch (view.name) {
@@ -164,11 +176,12 @@ export function App() {
         <Game
           key={view.id}
           target={view.target}
+          hardcore={view.hardcore}
           timer={view.timer}
           start={view.start}
           nextQuestion={nextQuestion}
-          onSave={(results, onScreen, extra) => save(view.target, results, onScreen, extra)}
-          onFinish={(results, goal) => finish(view.target, results, goal)}
+          onSave={(results, onScreen, extra) => save(view.target, view.hardcore, results, onScreen, extra)}
+          onFinish={(results, goal) => finish(view.target, results, goal, view.hardcore)}
           onQuit={() => setView({ name: 'home' })}
         />
       )
@@ -179,7 +192,7 @@ export function App() {
             score={scoreOf(view.results)}
             target={view.target}
             questions={view.results.length}
-            onDone={() => setView({ name: 'summary', results: view.results, target: view.target })}
+            onDone={() => setView({ name: 'summary', results: view.results, target: view.target, hardcore: view.hardcore })}
           />
         )
       }
@@ -187,7 +200,7 @@ export function App() {
         <Finale
           target={view.target}
           questions={view.results.length}
-          onDone={() => setView({ name: 'summary', results: view.results, target: view.target })}
+          onDone={() => setView({ name: 'summary', results: view.results, target: view.target, hardcore: view.hardcore })}
         />
       )
     case 'world':
@@ -202,6 +215,14 @@ export function App() {
         />
       )
     case 'summary':
-      return <Summary results={view.results} target={view.target} onAgain={newGame} onHome={() => setView({ name: 'home' })} />
+      return (
+        <Summary
+          results={view.results}
+          target={view.target}
+          hardcore={view.hardcore}
+          onAgain={newGame}
+          onHome={() => setView({ name: 'home' })}
+        />
+      )
   }
 }

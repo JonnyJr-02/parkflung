@@ -32,9 +32,17 @@ export function isTarget(value: unknown): value is Target {
   return TARGETS.includes(value as Target)
 }
 
-/** Questions in a game at most: 20 to reach 500 points, 40 for 1000. After the last one the game ends, house or not. */
-export function maxQuestions(target: number): number {
-  return Math.round(target / 25)
+/**
+ * Questions in a game at most: in hardcore 20 to reach 500 points and 40 for 1000; without
+ * hardcore (no misses) a quarter fewer, 15 and 30. After the last one the game ends, house or not.
+ */
+export function maxQuestions(target: number, hardcore = true): number {
+  return Math.round((target / 25) * (hardcore ? 1 : 0.75))
+}
+
+/** The rarities a game can end on, from the bottom of the meter: without hardcore there is no miss. */
+export function ladderFor(hardcore: boolean): readonly Outcome[] {
+  return hardcore ? OUTCOMES : OUTCOMES.filter((outcome) => outcome !== 'miss')
 }
 
 /** Four stops between the cart and the house, one every fifth of the way: 100…400, or 200…800. */
