@@ -179,7 +179,7 @@ describe('built-in questions', () => {
   })
 
   it('reach the target size', () => {
-    expect(bank.length).toBeGreaterThanOrEqual(1000)
+    expect(bank.length).toBeGreaterThanOrEqual(1500)
   })
 })
 

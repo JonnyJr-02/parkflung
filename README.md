@@ -29,7 +29,7 @@ di legno fino alla casa di Ale a Varigotti. La partita finisce solo quando ci ar
   Shave like a Bomber! (50), Jonny 🍆 (75), Marco B. (100).
 - **Rivelazione:** il termometro si ferma, il gradino vicino lampeggia e poi la barra sale o ricade,
   metà e metà, per ogni fascia (anche per «morto di CACCA ADDOSSO !»).
-- **Domande:** circa 1000, di ogni genere, in ordine casuale diverso per ogni telefono. Escono prima
+- **Domande:** 1500, di ogni genere, in ordine casuale diverso per ogni telefono. Escono prima
   quelle mai giocate, mai una ripetuta nella stessa partita e mai due della stessa famiglia vicine
   (per esempio due «Una città del…»); in Impostazioni si può scegliere se, finite quelle, devono ricapitare.
 - **Fasce di rarità:** le risposte di ogni domanda, dalla più comune alla più rara, sono divise in tre
