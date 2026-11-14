@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { builtIn, derived, family, LETTER_GROUPS, MIN_LETTER_ANSWERS, mergeBank, mergeCustom, pickNext } from './bank'
 import { editDistance, matchAnswer, stem, tokenize } from './match'
 import { compile, parseJson, parseText, parseUpload, type RawQuestion } from './parse'
-import { MAX_SCORE, stopsFor, stopsReached, TIERS, worldOf, WORLDS } from './tiers'
+import { maxQuestions, MAX_SCORE, stopsFor, stopsReached, TIERS, worldOf, WORLDS } from './tiers'
 
 const fruit: RawQuestion = {
   q: 'Un frutto',
@@ -275,6 +275,13 @@ describe('a game until the house', () => {
   it('ends with the arrival at the house of Ale', async () => {
     const { ARRIVAL_TITLE } = await import('../components/Finale')
     expect(ARRIVAL_TITLE).toContain('casa di Ale a Varigotti')
+  })
+
+  it('ends after 20 questions at 500 points and 40 at 1000, with an ending for each world', async () => {
+    expect(maxQuestions(500)).toBe(20)
+    expect(maxQuestions(1000)).toBe(40)
+    const { GAME_OVER } = await import('../components/GameOver')
+    expect(GAME_OVER).toHaveLength(WORLDS.length)
   })
 
   it('has its own show for each world left behind before the house', async () => {

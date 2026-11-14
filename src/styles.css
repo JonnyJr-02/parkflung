@@ -2757,3 +2757,95 @@ button {
     animation-delay: 0ms !important;
   }
 }
+
+/* ---------- Questions run out: at most 20 (500 points) or 40 (1000) ---------- */
+
+.game-count small {
+  font-size: 0.78rem;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+/* The last question of the game. */
+.game-count.last {
+  background: #fff3b0;
+}
+
+.reveal-last {
+  margin: -2px 0 10px;
+  padding: 6px 12px;
+  border: 2px solid var(--edge);
+  border-radius: var(--radius-m);
+  background: #fff3b0;
+  color: #1d2a44;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+/* The ending without the house: the sky of the world where the walker stopped. */
+.finale.game-over {
+  background: linear-gradient(180deg, var(--p-sky-1) 0%, var(--p-sky-2) 55%, var(--p-sky-3) 100%);
+}
+
+.finale.game-over.world-0,
+.finale.game-over.world-1,
+.finale.game-over.world-4 {
+  color: #fff8ea;
+}
+
+.finale.game-over.world-0 .finale-kicker,
+.finale.game-over.world-1 .finale-kicker,
+.finale.game-over.world-4 .finale-kicker,
+.finale.game-over.world-0 .finale-note,
+.finale.game-over.world-1 .finale-note,
+.finale.game-over.world-4 .finale-note {
+  text-shadow: 0 1px 2px rgb(29 42 68 / 0.6);
+}
+
+.finale.game-over.world-3 .finale-rays {
+  background: repeating-conic-gradient(rgb(255 255 255 / 0.22) 0deg 8deg, transparent 8deg 16deg);
+}
+
+.finale.game-over.world-4 .finale-rays {
+  background: repeating-conic-gradient(rgb(255 210 120 / 0.2) 0deg 7deg, transparent 7deg 14deg);
+  animation-duration: 18s;
+}
+
+.game-over .finale-center {
+  gap: 8px;
+}
+
+.game-over-scene {
+  width: min(86vw, 360px);
+  height: min(28dvh, 230px);
+  border: 2px solid #1d2a44;
+  border-radius: 18px;
+  box-shadow: 0 5px 0 #1d2a44;
+  animation: pop 600ms var(--ease-out) both;
+}
+
+.game-over .finale-score strong {
+  font-size: clamp(3.4rem, 18vw, 5rem);
+}
+
+.game-over .finale-stops li {
+  font-size: 1.2rem;
+}
+
+.game-over-title {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(1.9rem, 8.5vw, 2.6rem);
+  line-height: 1.05;
+  animation: drop-in 520ms var(--ease-out) 900ms both;
+}
+
+.finale.game-over.world-0 .game-over-title,
+.finale.game-over.world-1 .game-over-title {
+  text-shadow: 0 3px 0 #1d2a44;
+}
+
+.finale.game-over.world-4 .game-over-title {
+  color: #fff3b0;
+  text-shadow: 0 3px 0 #1d2a44;
+}

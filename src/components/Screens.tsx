@@ -3,7 +3,7 @@ import { builtIn, countFresh, derived, mergeCustom } from '../game/bank'
 import { parseUpload, type Question } from '../game/parse'
 import { TIMER_CHOICES, timerLabel } from '../game/timer'
 import { update, useSavedState } from '../game/store'
-import { OUTCOMES, TARGETS, TIER_INFO, TIERS, worldOf, WORLDS } from '../game/tiers'
+import { maxQuestions, OUTCOMES, TARGETS, TIER_INFO, TIERS, worldOf, WORLDS } from '../game/tiers'
 import type { Result } from './Game'
 import { Scene } from './Scene'
 
@@ -64,7 +64,7 @@ export function Home({
         </h1>
         <p className="lede">
           Una domanda dopo l'altra: più la risposta è rara, più strada fai. Arrivi alla casa di Ale&nbsp;a&nbsp;Varigotti a{' '}
-          {target}&nbsp;punti.
+          {target}&nbsp;punti, se ce la fai in {maxQuestions(target)}&nbsp;domande.
         </p>
         <div className="target-choice">
           <p className="target-label" id="target-label">
@@ -85,14 +85,15 @@ export function Home({
             ))}
           </div>
           <p className="note">
-            Cinque mondi lungo il sentiero, uno ogni {saved.target / 5} punti: temporale, pioggerella, nuvole e sole, sole e tramonto.
+            Al massimo {maxQuestions(saved.target)} domande. Cinque mondi lungo il sentiero, uno ogni {saved.target / 5} punti: temporale,
+            pioggerella, nuvole e sole, sole e tramonto.
           </p>
         </div>
         {game ? (
           <>
             <p className="current-game">
               <span aria-hidden="true">{WORLDS[world]!.icon}</span> Partita in corso: <strong>{gameScore}</strong> su {target} punti
-              · {game.results.length} {game.results.length === 1 ? 'domanda' : 'domande'} · {WORLDS[world]!.name}
+              · domande {Math.min(game.results.length, maxQuestions(target))} di {maxQuestions(target)} · {WORLDS[world]!.name}
             </p>
             <button type="button" className="btn" onClick={onPlay}>
               Continua la partita
@@ -195,6 +196,8 @@ export function Summary({
   onHome: () => void
 }) {
   const score = Math.min(target, results.reduce((sum, result) => sum + TIER_INFO[result.outcome].points, 0))
+  const arrived = score >= target
+  const world = arrived ? 4 : worldOf(score, target)
   // Start at the cart, then walk: the scene animates whenever its points change.
   const [walked, setWalked] = useState(0)
   useEffect(() => {
@@ -208,17 +211,20 @@ export function Summary({
         className="hero hero-tall"
         points={walked}
         target={target}
-        world={4}
+        world={world}
         msPer100={650 * (500 / target)}
-        label={`L'omino è arrivato alla casa di Ale: ${score} punti su ${target}`}
+        label={arrived ? `L'omino è arrivato alla casa di Ale: ${score} punti su ${target}` : `L'omino si è fermato a ${score} punti su ${target}`}
       />
       <div className="home-body">
         <p className="total">
           <strong>{score}</strong> / {target}
         </p>
         <h1 className="destination">
-          Sei arrivato alla casa di Ale a Varigotti in {results.length} {results.length === 1 ? 'domanda' : 'domande'}!
+          {arrived
+            ? `Sei arrivato alla casa di Ale a Varigotti in ${results.length} ${results.length === 1 ? 'domanda' : 'domande'}!`
+            : `Domande finite: ti sei fermato nel mondo ${WORLDS[world]!.icon} ${WORLDS[world]!.name}, a ${target - score} punti dalla casa di Ale.`}
         </h1>
+        <p className="note">Sotto ogni domanda puoi aprire tutte le sue risposte possibili, fascia per fascia.</p>
         <ol className="results">
           {results.map((result, index) => (
             <ResultCard key={`${result.question.id}-${index}`} result={result} number={index + 1} />

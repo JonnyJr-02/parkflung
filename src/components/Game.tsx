@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 
 import { matchAnswer, type Answer } from '../game/match'
 import type { Question } from '../game/parse'
 import { markSeen } from '../game/store'
-import { stopsFor, TIER_INFO, worldOf, WORLDS, type Outcome } from '../game/tiers'
+import { maxQuestions, stopsFor, TIER_INFO, worldOf, WORLDS, type Outcome } from '../game/tiers'
 import { Farflung } from './Farflung'
 import { RarityMeter } from './RarityMeter'
 import { Timer } from './Timer'
@@ -70,7 +70,8 @@ export function scoreOf(results: readonly Result[]): number {
 
 /**
  * A game: one question after another until the walker reaches the house of Ale at `target`
- * points. Every answer is saved, so the game can be left and picked up again.
+ * points, or the questions run out (20 for 500 points, 40 for 1000). Every answer is saved, so
+ * the game can be left and picked up again.
  */
 export function Game({
   target,
@@ -101,6 +102,9 @@ export function Game({
   const score = scoreOf(results)
   const last = results[results.length - 1]
   const arrived = score >= target
+  const limit = maxQuestions(target)
+  /** The game is over after this answer: the house is reached or that was the last question. */
+  const over = arrived || results.length >= limit
   const committed = phase.kind === 'reveal' || phase.kind === 'walk' || phase.kind === 'world'
   const number = committed ? results.length : results.length + 1
   const world = worldOf(score, target)
@@ -142,7 +146,7 @@ export function Game({
   }
 
   function next() {
-    if (arrived) {
+    if (over) {
       onFinish(results)
       return
     }
@@ -162,8 +166,13 @@ export function Game({
         <button type="button" className="link" onClick={onQuit}>
           Esci
         </button>
-        <p className="game-count" key={number} aria-label={`Domanda ${number}, mondo ${WORLDS[world]!.name}`}>
+        <p
+          className={number === limit ? 'game-count last' : 'game-count'}
+          key={number}
+          aria-label={`Domanda ${number} di ${limit}, mondo ${WORLDS[world]!.name}`}
+        >
           <span aria-hidden="true">{WORLDS[world]!.icon}</span> Domanda {number}
+          <small> di {limit}</small>
         </p>
         <p className="game-score" aria-label={`${Math.min(score, target)} punti su ${target}`}>
           {Math.min(score, target)}
@@ -236,8 +245,9 @@ export function Game({
                 ? `+${TIER_INFO[last.outcome].points} punti · sei a ${Math.min(score, target)} su ${target}`
                 : "Nessun passo avanti: l'omino resta fermo"}
             </p>
+            {over && !arrived && <p className="reveal-last">Era l'ultima domanda: mancano {target - score} punti alla casa di Ale.</p>}
             <button ref={nextRef} type="button" className="btn" onClick={next}>
-              {arrived ? 'Entra nella casa di Ale' : 'Prossima domanda'}
+              {arrived ? 'Entra nella casa di Ale' : over ? "Vedi com'è andata" : 'Prossima domanda'}
             </button>
           </section>
         )}

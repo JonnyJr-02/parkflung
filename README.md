@@ -6,6 +6,11 @@ di legno fino alla casa di Ale a Varigotti. La partita finisce solo quando ci ar
 
 - **Partita fino alla casa:** a 500 o a 1000 punti, si sceglie nella Home. La partita si salva a ogni
   risposta: si può uscire e continuarla dopo, anche chiudendo l'app.
+- **Domande contate:** al massimo 20 domande a 500 punti, 40 a 1000. Se finiscono prima della casa,
+  parte un'animazione a schermo intero: l'omino cammina fino a dove si è fermato, nel meteo del suo
+  mondo, con una festa che cresce col mondo raggiunto (pioggia nel temporale, fuochi al tramonto).
+  Poi il riepilogo, dove sotto ogni domanda si aprono tutte le risposte possibili. In sviluppo
+  `?finale=230` la mostra subito.
 - **Cinque mondi:** il meteo cambia ogni quinto di sentiero (100 o 200 punti): temporale con i fulmini,
   pioggerella, nuvole e sole, sole, tramonto. Si vede nella camminata a schermo intero e nel riepilogo
   punti dopo ogni risposta.

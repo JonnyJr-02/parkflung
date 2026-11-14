@@ -32,6 +32,11 @@ export function isTarget(value: unknown): value is Target {
   return TARGETS.includes(value as Target)
 }
 
+/** Questions in a game at most: 20 to reach 500 points, 40 for 1000. After the last one the game ends, house or not. */
+export function maxQuestions(target: number): number {
+  return Math.round(target / 25)
+}
+
 /** Four stops between the cart and the house, one every fifth of the way: 100…400, or 200…800. */
 export function stopsFor(target: number): number[] {
   return [1, 2, 3, 4].map((k) => (target * k) / 5)

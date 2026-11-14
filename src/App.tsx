@@ -1,18 +1,19 @@
 import { useMemo, useState } from 'react'
 import { Finale } from './components/Finale'
 import { Game, scoreOf, type Result } from './components/Game'
+import { GameOver } from './components/GameOver'
 import { Home, Settings, Summary } from './components/Screens'
 import { WorldDone } from './components/WorldDone'
 import { mergeBank, pickNext } from './game/bank'
 import type { Question } from './game/parse'
 import { getState, recordGame, saveGame, useSavedState, type SavedGame, type SavedResult } from './game/store'
-import { DEFAULT_TARGET, type Target } from './game/tiers'
+import { DEFAULT_TARGET, maxQuestions, OUTCOMES, TIER_INFO, type Target } from './game/tiers'
 
 type View =
   | { name: 'home' }
   | { name: 'settings' }
   | { name: 'game'; id: number; target: Target; timer: number; start: { results: Result[]; question: Question } }
-  /** The arrival at the house of Ale, then the summary. */
+  /** The end of a game, then the summary: the arrival at the house of Ale, or the questions run out. */
   | { name: 'finale'; results: Result[]; target: Target }
   | { name: 'summary'; results: Result[]; target: Target }
   /** Development only: one world-completed show on its own. */
@@ -30,8 +31,9 @@ function toSaved(result: Result): SavedResult {
 }
 
 /**
- * In development, `?finale` opens the arrival with a made-up game and `?mondo=0` to `?mondo=3` the
- * show of that world completed, to try them quickly.
+ * In development, `?finale` opens the arrival with a made-up game, `?finale=230` the end of a game
+ * that ran out of questions at about that score, and `?mondo=0` to `?mondo=3` the show of that
+ * world completed, to try them quickly.
  */
 function firstView(): View {
   if (!import.meta.env.DEV) return { name: 'home' }
@@ -39,6 +41,17 @@ function firstView(): View {
   const world = Number(params.get('mondo'))
   if (params.has('mondo') && world >= 0 && world <= 3) return { name: 'world', world }
   if (!params.has('finale')) return { name: 'home' }
+  const wanted = Number(params.get('finale'))
+  if (wanted > 0 && wanted < DEFAULT_TARGET) {
+    // As many questions as allowed, each worth the most that still fits under the wanted score.
+    let left = wanted
+    const results: Result[] = Array.from({ length: maxQuestions(DEFAULT_TARGET) }, (_, i) => {
+      const outcome = [...OUTCOMES].reverse().find((tier) => TIER_INFO[tier].points <= left) ?? 'miss'
+      left -= TIER_INFO[outcome].points
+      return { question: { id: `prova-${i}`, prompt: `Domanda di prova ${i + 1}`, answers: [] }, typed: 'prova', outcome }
+    })
+    return { name: 'finale', results, target: DEFAULT_TARGET }
+  }
   const results: Result[] = Array.from({ length: 7 }, (_, i) => ({
     question: { id: `prova-${i}`, prompt: `Domanda di prova ${i + 1}`, answers: [] },
     typed: '',
@@ -73,6 +86,11 @@ export function App() {
   function open(game: SavedGame) {
     const { timerOn, timerSeconds } = getState()
     const results = game.results.map(toResult)
+    // A game saved when it was already over (all its questions played) goes straight to its ending.
+    if (results.length >= maxQuestions(game.target) || scoreOf(results) >= game.target) {
+      finish(game.target, results)
+      return
+    }
     const pending = game.pending ? byId.get(game.pending) : undefined
     const answered = new Set(game.results.map((result) => result.id))
     const question = pending && !answered.has(pending.id) ? pending : nextQuestion(results.map((result) => result.question))
@@ -130,6 +148,16 @@ export function App() {
         />
       )
     case 'finale':
+      if (scoreOf(view.results) < view.target) {
+        return (
+          <GameOver
+            score={scoreOf(view.results)}
+            target={view.target}
+            questions={view.results.length}
+            onDone={() => setView({ name: 'summary', results: view.results, target: view.target })}
+          />
+        )
+      }
       return (
         <Finale
           target={view.target}
