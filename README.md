@@ -11,6 +11,12 @@ di legno fino alla casa di Ale a Varigotti. La partita finisce solo quando ci ar
   mondo, con una festa che cresce col mondo raggiunto (pioggia nel temporale, fuochi al tramonto).
   Poi il riepilogo, dove sotto ogni domanda si aprono tutte le risposte possibili. In sviluppo
   `?finale=230` la mostra subito.
+- **Casella imprevisti «?»:** esattamente a metà sentiero (250 o 500 punti). Quando l'omino ci arriva
+  si sceglie a schermo intero: continuare senza imprevisto o girare la ruota della fortuna. La ruota ha
+  cinque spicchi, tutti con la stessa probabilità: +100 punti al traguardo e −3 domande (malus, rossi),
+  +3 domande e −100 punti al traguardo (bonus, blu) e la Carta Rivincita (oro): per tutta la partita,
+  dopo un «morto di CACCA ADDOSSO !» si può rispondere di nuovo alla stessa domanda, una volta per
+  domanda. In sviluppo `?imprevisto` mostra subito la scelta e la ruota.
 - **Cinque mondi:** il meteo cambia ogni quinto di sentiero (100 o 200 punti): temporale con i fulmini,
   pioggerella, nuvole e sole, sole, tramonto. Si vede nella camminata a schermo intero e nel riepilogo
   punti dopo ogni risposta.

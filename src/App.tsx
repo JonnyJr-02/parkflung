@@ -3,21 +3,32 @@ import { Finale } from './components/Finale'
 import { Game, scoreOf, type Result } from './components/Game'
 import { GameOver } from './components/GameOver'
 import { Home, Settings, Summary } from './components/Screens'
+import { SurpriseSquare } from './components/Surprise'
 import { WorldDone } from './components/WorldDone'
 import { mergeBank, pickNext } from './game/bank'
 import type { Question } from './game/parse'
 import { getState, recordGame, saveGame, useSavedState, type SavedGame, type SavedResult } from './game/store'
+import { rulesFor, type Surprise } from './game/surprise'
 import { DEFAULT_TARGET, maxQuestions, OUTCOMES, TIER_INFO, type Target } from './game/tiers'
 
 type View =
   | { name: 'home' }
   | { name: 'settings' }
-  | { name: 'game'; id: number; target: Target; timer: number; start: { results: Result[]; question: Question } }
+  | {
+      name: 'game'
+      id: number
+      target: Target
+      timer: number
+      start: { results: Result[]; question: Question; surprise?: Surprise; retried?: string }
+    }
   /** The end of a game, then the summary: the arrival at the house of Ale, or the questions run out. */
-  | { name: 'finale'; results: Result[]; target: Target }
-  | { name: 'summary'; results: Result[]; target: Target }
+  /** `target` is the points the house was at in the end, after the wheel of fortune. */
+  | { name: 'finale'; results: Result[]; target: number }
+  | { name: 'summary'; results: Result[]; target: number }
   /** Development only: one world-completed show on its own. */
   | { name: 'world'; world: number }
+  /** Development only: the "?" square and its wheel on their own. */
+  | { name: 'surprise' }
 
 function toSaved(result: Result): SavedResult {
   return {
@@ -27,6 +38,7 @@ function toSaved(result: Result): SavedResult {
     outcome: result.outcome,
     answer: result.answer?.label,
     timedOut: result.timedOut,
+    retried: result.retried,
   }
 }
 
@@ -40,6 +52,7 @@ function firstView(): View {
   const params = new URLSearchParams(location.search)
   const world = Number(params.get('mondo'))
   if (params.has('mondo') && world >= 0 && world <= 3) return { name: 'world', world }
+  if (params.has('imprevisto')) return { name: 'surprise' }
   if (!params.has('finale')) return { name: 'home' }
   const wanted = Number(params.get('finale'))
   if (wanted > 0 && wanted < DEFAULT_TARGET) {
@@ -74,6 +87,7 @@ export function App() {
       outcome: result.outcome,
       answer: question.answers.find((answer) => answer.label === result.answer),
       timedOut: result.timedOut,
+      retried: result.retried,
     }
   }
 
@@ -87,15 +101,24 @@ export function App() {
     const { timerOn, timerSeconds } = getState()
     const results = game.results.map(toResult)
     // A game saved when it was already over (all its questions played) goes straight to its ending.
-    if (results.length >= maxQuestions(game.target) || scoreOf(results) >= game.target) {
-      finish(game.target, results)
+    const { goal, limit } = rulesFor(game.target, game.surprise)
+    if (results.length >= limit || scoreOf(results) >= goal) {
+      finish(game.target, results, goal)
       return
     }
     const pending = game.pending ? byId.get(game.pending) : undefined
     const answered = new Set(game.results.map((result) => result.id))
     const question = pending && !answered.has(pending.id) ? pending : nextQuestion(results.map((result) => result.question))
     saveGame({ ...game, pending: question.id })
-    setView({ name: 'game', id: Date.now(), target: game.target, timer: timerOn ? timerSeconds : 0, start: { results, question } })
+    // The Carta Rivincita used on the question on screen stays used when the game is picked up again.
+    const retried = game.retried === question.id ? game.retried : undefined
+    setView({
+      name: 'game',
+      id: Date.now(),
+      target: game.target,
+      timer: timerOn ? timerSeconds : 0,
+      start: { results, question, surprise: game.surprise, retried },
+    })
   }
 
   function newGame() {
@@ -108,16 +131,18 @@ export function App() {
     else newGame()
   }
 
-  function save(target: Target, results: Result[], onScreen: Question | null) {
+  function save(target: Target, results: Result[], onScreen: Question | null, extra: { surprise?: Surprise; retried?: string }) {
     saveGame({
       target,
       startedAt: getState().current?.startedAt ?? Date.now(),
       results: results.map(toSaved),
       pending: onScreen?.id,
+      surprise: extra.surprise,
+      retried: onScreen && extra.retried === onScreen.id ? extra.retried : undefined,
     })
   }
 
-  function finish(target: Target, results: Result[]) {
+  function finish(target: Target, results: Result[], goal: number) {
     recordGame({
       at: Date.now(),
       score: scoreOf(results),
@@ -126,7 +151,7 @@ export function App() {
       questions: results.length,
     })
     saveGame(null)
-    setView({ name: 'finale', results, target })
+    setView({ name: 'finale', results, target: goal })
   }
 
   switch (view.name) {
@@ -142,8 +167,8 @@ export function App() {
           timer={view.timer}
           start={view.start}
           nextQuestion={nextQuestion}
-          onSave={(results, onScreen) => save(view.target, results, onScreen)}
-          onFinish={(results) => finish(view.target, results)}
+          onSave={(results, onScreen, extra) => save(view.target, results, onScreen, extra)}
+          onFinish={(results, goal) => finish(view.target, results, goal)}
           onQuit={() => setView({ name: 'home' })}
         />
       )
@@ -167,6 +192,15 @@ export function App() {
       )
     case 'world':
       return <WorldDone world={view.world} target={DEFAULT_TARGET} onDone={() => setView({ name: 'home' })} />
+    case 'surprise':
+      return (
+        <SurpriseSquare
+          target={DEFAULT_TARGET}
+          onSkip={() => setView({ name: 'home' })}
+          onPrize={() => {}}
+          onDone={() => setView({ name: 'home' })}
+        />
+      )
     case 'summary':
       return <Summary results={view.results} target={view.target} onAgain={newGame} onHome={() => setView({ name: 'home' })} />
   }

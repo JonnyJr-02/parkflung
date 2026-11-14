@@ -107,6 +107,8 @@ export interface SceneProps {
   world?: number
   /** Milliseconds to walk 100 points. */
   msPer100?: number
+  /** The "?" square: at how many points, and whether it was already met. */
+  surprise?: { at: number; used: boolean }
   label: string
   className?: string
   onArrive?: () => void
@@ -118,6 +120,7 @@ export function Scene({
   target = DEFAULT_TARGET,
   world = 4,
   msPer100 = 900,
+  surprise,
   label,
   className,
   onArrive,
@@ -133,6 +136,8 @@ export function Scene({
   const arriveRef = useRef(onArrive)
   arriveRef.current = onArrive
   const [stops, setStops] = useState<Array<[number, number]>>([])
+  const [surpriseAt, setSurpriseAt] = useState<[number, number] | null>(null)
+  const surpriseShare = surprise ? Math.min(1, surprise.at / target) : null
 
   function place(score: number, bob: number) {
     const path = pathRef.current
@@ -162,6 +167,16 @@ export function Scene({
     }))
     place(shownRef.current, 0)
   }, [])
+
+  useLayoutEffect(() => {
+    const path = pathRef.current
+    if (!path || surpriseShare === null) {
+      setSurpriseAt(null)
+      return
+    }
+    const p = path.getPointAtLength(path.getTotalLength() * surpriseShare)
+    setSurpriseAt([p.x, p.y])
+  }, [surpriseShare])
 
   // Walking
   useEffect(() => {
@@ -296,6 +311,15 @@ export function Scene({
               </text>
             </g>
           ))}
+          {surprise && surpriseAt && (
+            <g transform={`translate(${surpriseAt[0]} ${surpriseAt[1] - 24})`} className={surprise.used ? 'p-surprise used' : 'p-surprise'}>
+              <path className="p-stop-pole" d="M0 10 V24" />
+              <rect className="p-surprise-box" x={-10} y={-10} width={20} height={20} rx={4} transform="rotate(45)" />
+              <text className="p-surprise-text" y={5}>
+                ?
+              </text>
+            </g>
+          )}
           <g ref={walkerRef} className="p-walker">
             <Walker />
           </g>

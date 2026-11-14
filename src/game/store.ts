@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { RawQuestion } from './parse'
+import { isPrize, type Surprise } from './surprise'
 import { DEFAULT_TIMER, isTimerSeconds, type TimerSeconds } from './timer'
 import { DEFAULT_TARGET, isTarget, type Outcome, type Target } from './tiers'
 
@@ -23,6 +24,8 @@ export interface SavedResult {
   /** Label of the matched answer. */
   answer?: string
   timedOut?: boolean
+  /** Answered a second time with the Carta Rivincita. */
+  retried?: boolean
 }
 
 /** The game in progress: it goes on until the house, and comes back when the app is reopened. */
@@ -32,6 +35,10 @@ export interface SavedGame {
   results: SavedResult[]
   /** The question on screen, so leaving and coming back does not skip it. */
   pending?: string
+  /** The "?" square halfway: missing until the walker gets there, then skipped or the wheel's prize. */
+  surprise?: Surprise
+  /** The question on screen already answered once more with the Carta Rivincita. */
+  retried?: string
 }
 
 export interface SavedState {
@@ -93,7 +100,15 @@ function readGame(value: unknown): SavedGame | null {
     startedAt: typeof game.startedAt === 'number' ? game.startedAt : Date.now(),
     results: game.results.filter((result) => result && typeof result.id === 'string' && typeof result.outcome === 'string'),
     pending: typeof game.pending === 'string' ? game.pending : undefined,
+    surprise: readSurprise(game.surprise),
+    retried: typeof game.retried === 'string' ? game.retried : undefined,
   }
+}
+
+function readSurprise(value: unknown): Surprise | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const prize = (value as Partial<Surprise>).prize
+  return prize === null || isPrize(prize) ? { prize } : undefined
 }
 
 let state: SavedState = read()

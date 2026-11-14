@@ -2849,3 +2849,487 @@ button {
   color: #fff3b0;
   text-shadow: 0 3px 0 #1d2a44;
 }
+
+/* ---------- The "?" square halfway, the wheel of fortune and the Carta Rivincita ---------- */
+
+.p-surprise-box {
+  fill: #7d35c9;
+  stroke: #1d2a44;
+  stroke-width: 2;
+}
+
+.p-surprise-text {
+  fill: #fff3b0;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 15px;
+  text-anchor: middle;
+}
+
+.p-surprise:not(.used) .p-surprise-box {
+  animation: surprise-glow 1.4s ease-in-out infinite alternate;
+}
+
+.p-surprise.used .p-surprise-box {
+  fill: #b9a7cf;
+}
+
+@keyframes surprise-glow {
+  to { fill: #a35ef0; }
+}
+
+.track-surprise {
+  position: absolute;
+  top: 3px;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--edge);
+  border-radius: 4px;
+  background: #7d35c9;
+  color: #fff3b0;
+  font-weight: 800;
+  font-size: 0.7rem;
+  line-height: 1;
+  transform: rotate(45deg);
+}
+
+.track-surprise.used {
+  background: #b9a7cf;
+}
+
+.card-badge {
+  align-self: center;
+  margin: 6px auto 0;
+  padding: 2px 12px;
+  border: 2px solid var(--edge);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffe38a, #f2c230);
+  color: #1d2a44;
+  font-weight: 700;
+  font-size: 0.82rem;
+  box-shadow: 0 2px 0 var(--edge);
+}
+
+.second-note,
+.reveal-card {
+  align-self: flex-start;
+  padding: 4px 12px;
+  border: 2px solid var(--edge);
+  border-radius: 999px;
+  background: #ffe38a;
+  color: #1d2a44;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.reveal-card {
+  align-self: center;
+  margin-bottom: 8px;
+}
+
+.surprise {
+  position: fixed;
+  inset: 0;
+  z-index: 47;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  overflow: hidden;
+  padding: calc(20px + env(safe-area-inset-top, 0px)) 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  background: radial-gradient(circle at 50% 30%, #6b3fb0 0%, #3a2470 55%, #1d1840 100%);
+  color: #fff8ea;
+  text-align: center;
+  animation: fade-in 300ms ease;
+}
+
+.surprise-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.surprise-mark {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-top: 8px;
+  border: 3px solid #1d2a44;
+  border-radius: 12px;
+  background: #7d35c9;
+  color: #fff3b0;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 2.4rem;
+  line-height: 1;
+  box-shadow: 0 5px 0 #1d2a44, 0 0 26px rgb(163 94 240 / 0.8);
+  transform: rotate(45deg);
+  animation: surprise-in 700ms var(--ease-out) both;
+}
+
+/* The diamond is a turned square: the "?" turns back upright. */
+.surprise-mark > span {
+  transform: rotate(-45deg);
+}
+
+@keyframes surprise-in {
+  from { opacity: 0; transform: rotate(-135deg) scale(0.3); }
+  to { opacity: 1; transform: rotate(45deg) scale(1); }
+}
+
+.surprise-title {
+  margin-top: 10px;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2rem, 9vw, 2.8rem);
+  line-height: 1.05;
+  color: #fff3b0;
+  text-shadow: 0 3px 0 #1d2a44;
+  animation: drop-in 520ms var(--ease-out) 200ms both;
+}
+
+.surprise-sub {
+  position: relative;
+  max-width: 32ch;
+  font-size: 1.05rem;
+  opacity: 0.9;
+}
+
+.surprise-kicker {
+  position: relative;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+/* Two big buttons that share the rest of the screen. */
+.surprise-choice {
+  flex: 1;
+  width: 100%;
+  max-width: 480px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 3px solid #1d2a44;
+  border-radius: 22px;
+  box-shadow: 0 6px 0 #1d2a44;
+  font: inherit;
+  cursor: pointer;
+  animation: pop 420ms var(--ease-out) both;
+}
+
+.surprise-choice strong {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(1.7rem, 8vw, 2.3rem);
+  line-height: 1.1;
+}
+
+.surprise-choice span {
+  font-weight: 600;
+  font-size: 0.95rem;
+  opacity: 0.85;
+}
+
+.surprise-choice:active {
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 #1d2a44;
+}
+
+.surprise-choice.skip {
+  background: #fff8ea;
+  color: #1d2a44;
+  animation-delay: 250ms;
+}
+
+.surprise-choice.take {
+  background: linear-gradient(135deg, #e8463c 0%, #f2c230 50%, #3b8fd6 100%);
+  color: #1d2a44;
+  animation-delay: 400ms;
+}
+
+.surprise-choice.take strong {
+  color: #fff8ea;
+  text-shadow: 0 2px 0 #1d2a44;
+}
+
+/* The wheel */
+.surprise-rays {
+  top: 45%;
+  background: repeating-conic-gradient(rgb(255 243 176 / 0.1) 0deg 8deg, transparent 8deg 16deg);
+}
+
+.wheel {
+  position: relative;
+  width: min(88vw, 360px, 52dvh);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  animation: pop 520ms var(--ease-out) both;
+}
+
+.wheel:disabled {
+  cursor: default;
+}
+
+.wheel-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 6px 0 #1d2a44);
+}
+
+.wheel-disc {
+  transition: transform 5.2s cubic-bezier(0.12, 0.68, 0.1, 1);
+  will-change: transform;
+}
+
+.wheel-rim {
+  fill: #1d2a44;
+}
+
+.wheel-slice path {
+  stroke: #1d2a44;
+  stroke-width: 2.5;
+}
+
+.wheel-slice.malus path { fill: #d64534; }
+.wheel-slice.bonus path { fill: #2f6fd6; }
+.wheel-slice.gold path { fill: #f2c230; }
+
+.wheel-big,
+.wheel-small {
+  text-anchor: middle;
+  fill: #fff8ea;
+}
+
+.wheel-slice.gold .wheel-big,
+.wheel-slice.gold .wheel-small {
+  fill: #1d2a44;
+}
+
+.wheel-big {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 22px;
+}
+
+.wheel-small {
+  font-weight: 700;
+  font-size: 9.5px;
+}
+
+.wheel-light {
+  fill: #fff3b0;
+  animation: wheel-light 700ms steps(1) infinite;
+  animation-delay: calc(var(--i) * 350ms);
+}
+
+.wheel-disc.spinning .wheel-light {
+  animation-duration: 180ms;
+  animation-delay: calc(var(--i) * 90ms);
+}
+
+@keyframes wheel-light {
+  50% { fill: #f2c230; }
+}
+
+.wheel-hub {
+  fill: #7d35c9;
+  stroke: #1d2a44;
+  stroke-width: 3;
+}
+
+.wheel-hub-text {
+  fill: #fff3b0;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 26px;
+  text-anchor: middle;
+}
+
+.wheel-pointer {
+  fill: #fff8ea;
+  stroke: #1d2a44;
+  stroke-width: 3;
+  stroke-linejoin: round;
+  /* Swings around its base, in the wheel's own coordinates. */
+  transform-origin: 0 -126px;
+}
+
+.spinning .wheel-pointer {
+  animation: wheel-tick 110ms ease-in-out infinite alternate;
+}
+
+@keyframes wheel-tick {
+  from { transform: rotate(-9deg); }
+  to { transform: rotate(9deg); }
+}
+
+.surprise .finale-button.surprise-spin {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  width: 100%;
+  background: #f2c230;
+}
+
+/* The prize, over the wheel once it stops. */
+.prize-card {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px;
+  border: 3px solid #1d2a44;
+  border-radius: 22px;
+  background: #fff8ea;
+  color: #1d2a44;
+  box-shadow: 0 6px 0 #1d2a44;
+  animation: sheet-in 420ms var(--ease-out) both;
+}
+
+.prize-card.malus { background: #ffe1db; }
+.prize-card.bonus { background: #dbe8ff; }
+.prize-card.gold { background: linear-gradient(180deg, #fff3b0, #ffe38a); }
+
+.prize-kind {
+  padding: 2px 12px;
+  border-radius: 999px;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.malus .prize-kind { background: #d64534; }
+.bonus .prize-kind { background: #2f6fd6; }
+.gold .prize-kind { background: #1d2a44; color: #f2c230; }
+
+.prize-big {
+  font-family: var(--serif);
+  font-size: 3.4rem;
+  line-height: 1;
+  animation: pop 480ms var(--ease-out) 120ms both;
+}
+
+.malus .prize-big { color: #d64534; }
+.bonus .prize-big { color: #2f6fd6; }
+
+.prize-title {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.7rem;
+  line-height: 1.1;
+}
+
+.prize-note {
+  max-width: 34ch;
+  font-size: 0.98rem;
+}
+
+.prize-card .btn {
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* The Carta Rivincita: a gold playing card. */
+.rivincita {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 78px;
+  height: 108px;
+  border: 3px solid #1d2a44;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fff3b0 0%, #f2c230 45%, #e9b13a 55%, #fff3b0 100%);
+  color: #1d2a44;
+  box-shadow: 0 5px 0 #1d2a44, 0 0 24px rgb(242 194 48 / 0.7);
+  animation: card-flip 900ms var(--ease-out) both;
+}
+
+.rivincita span {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+.rivincita small {
+  font-weight: 800;
+  font-size: 0.62rem;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.rivincita.big {
+  width: 120px;
+  height: 166px;
+}
+
+.rivincita.big span {
+  font-size: 3.4rem;
+}
+
+.rivincita.big small {
+  font-size: 0.8rem;
+}
+
+@keyframes card-flip {
+  from { opacity: 0; transform: perspective(600px) rotateY(180deg) scale(0.6); }
+  to { opacity: 1; transform: perspective(600px) rotateY(0deg) scale(1); }
+}
+
+.surprise.second {
+  background: radial-gradient(circle at 50% 30%, #6a5320 0%, #3a2c10 55%, #1d1608 100%);
+}
+
+.surprise.second .btn {
+  width: 100%;
+  max-width: 480px;
+}
+
+.surprise.second .second-retry {
+  background: #f2c230;
+  color: #1d2a44;
+}
+
+.surprise.second .second-keep {
+  color: #fff8ea;
+  border-color: #fff8ea;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wheel-disc {
+    transition: none;
+  }
+
+  .wheel-light,
+  .spinning .wheel-pointer,
+  .p-surprise .p-surprise-box {
+    animation: none;
+  }
+}

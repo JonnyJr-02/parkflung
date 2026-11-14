@@ -12,12 +12,15 @@ export function WalkOverlay({
   to,
   target,
   outcome,
+  surprise,
   onDone,
 }: {
   from: number
   to: number
   target: number
   outcome: Outcome
+  /** The "?" square halfway, and whether it was already met. */
+  surprise?: { at: number; used: boolean }
   onDone: () => void
 }) {
   const [points, setPoints] = useState(from)
@@ -35,7 +38,9 @@ export function WalkOverlay({
       ? 'Sei arrivato alla casa di Ale a Varigotti!'
       : worldTo > worldFrom
         ? `Nuovo mondo: ${WORLDS[worldTo]!.icon} ${WORLDS[worldTo]!.name}!`
-        : passed.length > 0
+        : surprise && !surprise.used && from < surprise.at && to >= surprise.at
+          ? 'Casella imprevisti ?'
+          : passed.length > 0
           ? `Tappa ${stops.indexOf(passed[passed.length - 1]!) + 1} superata!`
           : null
 
@@ -65,6 +70,7 @@ export function WalkOverlay({
         target={target}
         world={arrived ? worldTo : worldFrom}
         msPer100={3000 * (500 / target)}
+        surprise={surprise}
         label={`Il sentiero: ${shownTo} punti su ${target}`}
         onArrive={() => setArrived(true)}
       />

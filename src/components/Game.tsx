@@ -2,9 +2,11 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 
 import { matchAnswer, type Answer } from '../game/match'
 import type { Question } from '../game/parse'
 import { markSeen } from '../game/store'
-import { maxQuestions, stopsFor, TIER_INFO, worldOf, WORLDS, type Outcome } from '../game/tiers'
+import { halfway, rulesFor, type Surprise } from '../game/surprise'
+import { stopsFor, TIER_INFO, worldOf, WORLDS, type Outcome } from '../game/tiers'
 import { Farflung } from './Farflung'
 import { RarityMeter } from './RarityMeter'
+import { SecondChance, SurpriseSquare } from './Surprise'
 import { Timer } from './Timer'
 import { WeatherStrip } from './Weather'
 import { WorldDone } from './WorldDone'
@@ -19,6 +21,8 @@ export interface Result {
   answer?: Answer
   /** The timer ran out before an answer was sent: it counts as a miss. */
   timedOut?: boolean
+  /** Answered a second time with the Carta Rivincita. */
+  retried?: boolean
 }
 
 type Phase =
@@ -32,10 +36,14 @@ type Phase =
   | { kind: 'walk'; from: number; outcome: Outcome }
   /** Full-screen celebration: the walker has just left a world for the next one. */
   | { kind: 'world'; world: number }
+  /** The "?" square halfway: go on or spin the wheel; then the recap (or the question, on a game picked up again). */
+  | { kind: 'surprise'; then: 'reveal' | 'ask' }
+  /** A miss with the Carta Rivincita in hand: answer again or keep it. */
+  | { kind: 'second'; result: Result }
   | { kind: 'reveal' }
 
-/** A thin trail along the top: where the walker is, and the four stops. */
-function Track({ score, target }: { score: number; target: number }) {
+/** A thin trail along the top: where the walker is, the four stops and the "?" square. */
+function Track({ score, target, surprise }: { score: number; target: number; surprise: { at: number; used: boolean } }) {
   const at = Math.min(1, score / target)
   return (
     <div className="track" aria-hidden="true">
@@ -44,6 +52,12 @@ function Track({ score, target }: { score: number; target: number }) {
       {stopsFor(target).map((stop) => (
         <span key={stop} className={score >= stop ? 'track-stop reached' : 'track-stop'} style={{ left: `${(stop / target) * 100}%` }} />
       ))}
+      <span
+        className={surprise.used ? 'track-surprise used' : 'track-surprise'}
+        style={{ left: `${Math.min(1, surprise.at / target) * 100}%` }}
+      >
+        ?
+      </span>
       <span className="track-walker" style={{ left: `${at * 100}%` }} />
       <span className="track-house" />
     </div>
@@ -70,8 +84,9 @@ export function scoreOf(results: readonly Result[]): number {
 
 /**
  * A game: one question after another until the walker reaches the house of Ale at `target`
- * points, or the questions run out (20 for 500 points, 40 for 1000). Every answer is saved, so
- * the game can be left and picked up again.
+ * points, or the questions run out (20 for 500 points, 40 for 1000). Halfway there is the "?"
+ * square, whose wheel of fortune can move the house, change the number of questions or give the
+ * Carta Rivincita. Every answer is saved, so the game can be left and picked up again.
  */
 export function Game({
   target,
@@ -85,39 +100,53 @@ export function Game({
   target: number
   /** Seconds for each question, 0 for no timer. */
   timer: number
-  /** What was already answered (when picking up a saved game) and the question to show now. */
-  start: { results: Result[]; question: Question }
+  /** What was already answered (when picking up a saved game), the question to show now and the "?" square. */
+  start: { results: Result[]; question: Question; surprise?: Surprise; retried?: string }
   nextQuestion: (asked: Question[]) => Question
-  onSave: (results: Result[], onScreen: Question | null) => void
-  onFinish: (results: Result[]) => void
+  onSave: (results: Result[], onScreen: Question | null, extra: { surprise?: Surprise; retried?: string }) => void
+  /** The game is over: the house reached at `goal` points, or the questions ran out. */
+  onFinish: (results: Result[], goal: number) => void
   onQuit: () => void
 }) {
   const [results, setResults] = useState<Result[]>(start.results)
   const [question, setQuestion] = useState<Question>(start.question)
   const [typed, setTyped] = useState('')
-  const [phase, setPhase] = useState<Phase>({ kind: 'ask' })
+  const [surprise, setSurprise] = useState<Surprise | undefined>(start.surprise)
+  /** The question on screen, once the Carta Rivincita was used on it. */
+  const [retried, setRetried] = useState<string | undefined>(start.retried)
+  // Picked up past the "?" square without having met it (left during the choice): it comes first.
+  const [phase, setPhase] = useState<Phase>(() =>
+    !start.surprise && scoreOf(start.results) >= halfway(target) && scoreOf(start.results) < target
+      ? { kind: 'surprise', then: 'ask' }
+      : { kind: 'ask' },
+  )
   const inputRef = useRef<HTMLInputElement>(null)
   const nextRef = useRef<HTMLButtonElement>(null)
 
   const score = scoreOf(results)
   const last = results[results.length - 1]
-  const arrived = score >= target
-  const limit = maxQuestions(target)
+  const { goal, limit, card } = rulesFor(target, surprise)
+  const half = halfway(target)
+  const arrived = score >= goal
   /** The game is over after this answer: the house is reached or that was the last question. */
   const over = arrived || results.length >= limit
-  const committed = phase.kind === 'reveal' || phase.kind === 'walk' || phase.kind === 'world'
+  const needsSurprise = !surprise && score >= half && !arrived
+  const committed =
+    phase.kind === 'reveal' || phase.kind === 'walk' || phase.kind === 'world' || (phase.kind === 'surprise' && phase.then === 'reveal')
   const number = committed ? results.length : results.length + 1
-  const world = worldOf(score, target)
+  const world = worldOf(score, goal)
+  const secondTry = retried === question.id
+  const attemptKey = secondTry ? `${question.id}-2` : question.id
 
   useEffect(() => {
     if (phase.kind === 'ask') inputRef.current?.focus({ preventScroll: true })
     if (phase.kind === 'reveal') nextRef.current?.focus({ preventScroll: true })
-  }, [phase.kind, question.id])
+  }, [phase.kind, attemptKey])
 
   function startSuspense(outcome: Outcome, answer?: Answer) {
     markSeen([question.id])
     inputRef.current?.blur()
-    setPhase({ kind: 'suspense', result: { question, typed: typed.trim(), outcome, answer } })
+    setPhase({ kind: 'suspense', result: { question, typed: typed.trim(), outcome, answer, retried: secondTry || undefined } })
   }
 
   /** Time is up on this question: whatever was typed, it is a miss. */
@@ -125,13 +154,44 @@ export function Game({
     if (phase.kind !== 'ask' && phase.kind !== 'confirm') return
     markSeen([question.id])
     inputRef.current?.blur()
-    setPhase({ kind: 'suspense', result: { question, typed: '', outcome: 'miss', timedOut: true } })
+    setPhase({ kind: 'suspense', result: { question, typed: '', outcome: 'miss', timedOut: true, retried: secondTry || undefined } })
+  }
+
+  /** The meter has stopped: Marco B. gets its party, a miss can be answered again with the card. */
+  function afterMeter(result: Result) {
+    if (result.outcome === 't') setPhase({ kind: 'celebrate', result })
+    else if (result.outcome === 'miss' && card && !secondTry) setPhase({ kind: 'second', result })
+    else commit(result)
+  }
+
+  function retry() {
+    setRetried(question.id)
+    onSave(results, question, { surprise, retried: question.id })
+    setTyped('')
+    setPhase({ kind: 'ask' })
+  }
+
+  /** After the walk: a world left behind gets its show, then the "?" square if the walker just got there. */
+  function afterWalk(from: number) {
+    const left = worldOf(from, goal)
+    if (score < goal && worldOf(score, goal) > left) setPhase({ kind: 'world', world: left })
+    else afterWorld()
+  }
+
+  function afterWorld() {
+    setPhase(needsSurprise ? { kind: 'surprise', then: 'reveal' } : { kind: 'reveal' })
+  }
+
+  function meetSurprise(prize: Surprise['prize'], then: 'reveal' | 'ask') {
+    const met = { prize }
+    setSurprise(met)
+    onSave(results, then === 'ask' ? question : null, { surprise: met, retried })
   }
 
   function commit(result: Result) {
     const now = [...results, result]
     setResults(now)
-    onSave(now, null)
+    onSave(now, null, { surprise, retried: undefined })
     // Every answer that scores ends with the walker crossing the trail, full screen.
     setPhase(TIER_INFO[result.outcome].points > 0 ? { kind: 'walk', from: score, outcome: result.outcome } : { kind: 'reveal' })
   }
@@ -147,11 +207,12 @@ export function Game({
 
   function next() {
     if (over) {
-      onFinish(results)
+      onFinish(results, goal)
       return
     }
     const upcoming = nextQuestion(results.map((result) => result.question))
-    onSave(results, upcoming)
+    setRetried(undefined)
+    onSave(results, upcoming, { surprise, retried: undefined })
     setQuestion(upcoming)
     setTyped('')
     setPhase({ kind: 'ask' })
@@ -161,7 +222,7 @@ export function Game({
 
   return (
     <main className={timer > 0 ? 'screen game has-timer' : 'screen game'}>
-      {timer > 0 && <Timer key={question.id} seconds={timer} running={answering} onExpire={timeUp} />}
+      {timer > 0 && <Timer key={attemptKey} seconds={timer} running={answering} onExpire={timeUp} />}
       <header className="game-top">
         <button type="button" className="link" onClick={onQuit}>
           Esci
@@ -174,17 +235,23 @@ export function Game({
           <span aria-hidden="true">{WORLDS[world]!.icon}</span> Domanda {number}
           <small> di {limit}</small>
         </p>
-        <p className="game-score" aria-label={`${Math.min(score, target)} punti su ${target}`}>
-          {Math.min(score, target)}
-          <small>/{target}</small>
+        <p className="game-score" aria-label={`${Math.min(score, goal)} punti su ${goal}`}>
+          {Math.min(score, goal)}
+          <small>/{goal}</small>
         </p>
       </header>
 
-      <Track score={score} target={target} />
+      <Track score={score} target={goal} surprise={{ at: half, used: !!surprise }} />
+      {card && (
+        <p className="card-badge" title="Dopo un «morto di CACCA ADDOSSO !» puoi rispondere di nuovo, una volta per domanda">
+          🃏 Carta Rivincita
+        </p>
+      )}
 
       <div className="game-body">
         {answering && (
-          <div className="ask" key={question.id}>
+          <div className="ask" key={attemptKey}>
+            {secondTry && <p className="second-note">🃏 Seconda risposta con la Carta Rivincita</p>}
             <Prompt text={question.prompt} />
             <form className="answer-form" onSubmit={submit}>
               <label className="sr-only" htmlFor="answer">
@@ -220,9 +287,7 @@ export function Game({
             key={question.id}
             outcome={phase.result.outcome}
             typed={phase.result.answer?.label ?? phase.result.typed}
-            onDone={() =>
-              phase.result.outcome === 't' ? setPhase({ kind: 'celebrate', result: phase.result }) : commit(phase.result)
-            }
+            onDone={() => afterMeter(phase.result)}
           />
         )}
 
@@ -240,12 +305,13 @@ export function Game({
                     ? `«${last.typed}» non è tra le risposte`
                     : 'Hai passato'}
             </p>
+            {last.retried && <p className="reveal-card">🃏 Seconda risposta, con la Carta Rivincita</p>}
             <p className="reveal-move">
               {TIER_INFO[last.outcome].points > 0
-                ? `+${TIER_INFO[last.outcome].points} punti · sei a ${Math.min(score, target)} su ${target}`
+                ? `+${TIER_INFO[last.outcome].points} punti · sei a ${Math.min(score, goal)} su ${goal}`
                 : "Nessun passo avanti: l'omino resta fermo"}
             </p>
-            {over && !arrived && <p className="reveal-last">Era l'ultima domanda: mancano {target - score} punti alla casa di Ale.</p>}
+            {over && !arrived && <p className="reveal-last">Era l'ultima domanda: mancano {goal - score} punti alla casa di Ale.</p>}
             <button ref={nextRef} type="button" className="btn" onClick={next}>
               {arrived ? 'Entra nella casa di Ale' : over ? "Vedi com'è andata" : 'Prossima domanda'}
             </button>
@@ -276,17 +342,29 @@ export function Game({
         <WalkOverlay
           from={phase.from}
           to={score}
-          target={target}
+          target={goal}
           outcome={phase.outcome}
-          onDone={() => {
-            // A world completed on the way gets its own show; the last one is the house, after the recap.
-            const left = worldOf(phase.from, target)
-            setPhase(score < target && worldOf(score, target) > left ? { kind: 'world', world: left } : { kind: 'reveal' })
-          }}
+          surprise={{ at: half, used: !!surprise }}
+          // A world completed on the way gets its own show; the last one is the house, after the recap.
+          onDone={() => afterWalk(phase.from)}
         />
       )}
 
-      {phase.kind === 'world' && <WorldDone world={phase.world} target={target} onDone={() => setPhase({ kind: 'reveal' })} />}
+      {phase.kind === 'world' && <WorldDone world={phase.world} target={goal} onDone={afterWorld} />}
+
+      {phase.kind === 'surprise' && (
+        <SurpriseSquare
+          target={target}
+          onSkip={() => {
+            meetSurprise(null, phase.then)
+            setPhase({ kind: phase.then })
+          }}
+          onPrize={(prize) => meetSurprise(prize, phase.then)}
+          onDone={() => setPhase({ kind: phase.then })}
+        />
+      )}
+
+      {phase.kind === 'second' && <SecondChance prompt={question.prompt} onRetry={retry} onKeep={() => commit(phase.result)} />}
     </main>
   )
 }

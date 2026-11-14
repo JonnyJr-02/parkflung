@@ -284,6 +284,26 @@ describe('a game until the house', () => {
     expect(GAME_OVER).toHaveLength(WORLDS.length)
   })
 
+  it('puts the "?" square halfway, and its wheel changes the house, the questions or gives the card', async () => {
+    const { halfway, PRIZES, rulesFor, spinPrize } = await import('./surprise')
+    expect([halfway(500), halfway(1000)]).toEqual([250, 500])
+    expect(rulesFor(500)).toEqual({ goal: 500, limit: 20, card: false })
+    expect(rulesFor(500, { prize: null })).toEqual({ goal: 500, limit: 20, card: false })
+    expect(rulesFor(500, { prize: 'goal-up' }).goal).toBe(600)
+    expect(rulesFor(500, { prize: 'goal-down' }).goal).toBe(400)
+    expect(rulesFor(1000, { prize: 'questions-up' }).limit).toBe(43)
+    expect(rulesFor(1000, { prize: 'questions-down' }).limit).toBe(37)
+    expect(rulesFor(500, { prize: 'card' }).card).toBe(true)
+    expect(PRIZES.map((prize) => prize.kind).sort()).toEqual(['bonus', 'bonus', 'gold', 'malus', 'malus'])
+    // Each slice is as likely as the others.
+    const counts = new Map<string, number>()
+    for (let i = 0; i < 1000; i++) {
+      const prize = spinPrize(() => i / 1000)
+      counts.set(prize, (counts.get(prize) ?? 0) + 1)
+    }
+    expect([...counts.values()]).toEqual([200, 200, 200, 200, 200])
+  })
+
   it('has its own show for each world left behind before the house', async () => {
     const { WORLD_DONE } = await import('../components/WorldDone')
     expect(WORLD_DONE).toHaveLength(WORLDS.length - 1)

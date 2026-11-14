@@ -3,6 +3,7 @@ import { builtIn, countFresh, derived, mergeCustom } from '../game/bank'
 import { parseUpload, type Question } from '../game/parse'
 import { TIMER_CHOICES, timerLabel } from '../game/timer'
 import { update, useSavedState } from '../game/store'
+import { halfway, prizeInfo, rulesFor } from '../game/surprise'
 import { maxQuestions, OUTCOMES, TARGETS, TIER_INFO, TIERS, worldOf, WORLDS } from '../game/tiers'
 import type { Result } from './Game'
 import { Scene } from './Scene'
@@ -42,7 +43,9 @@ export function Home({
   const fresh = countFresh(bank, saved.seen)
   const canStart = saved.repeat || fresh > 0
   const gameScore = game ? game.results.reduce((sum, result) => sum + TIER_INFO[result.outcome].points, 0) : 0
-  const world = game ? worldOf(gameScore, target) : 4
+  const rules = rulesFor(target, game?.surprise)
+  const world = game ? worldOf(gameScore, rules.goal) : 4
+  const prize = game?.surprise?.prize
   const [confirmNew, setConfirmNew] = useState(false)
 
   return (
@@ -50,8 +53,9 @@ export function Home({
       <Scene
         className="hero"
         points={gameScore}
-        target={target}
+        target={rules.goal}
         world={world}
+        surprise={game ? { at: halfway(target), used: !!game.surprise } : undefined}
         label="Un manifesto della riviera: un sentiero parte da un carro di legno e arriva alla casa di Ale a Varigotti, sul mare"
       >
         <button type="button" className="icon-button hero-settings" onClick={onSettings} aria-label="Impostazioni">
@@ -92,8 +96,9 @@ export function Home({
         {game ? (
           <>
             <p className="current-game">
-              <span aria-hidden="true">{WORLDS[world]!.icon}</span> Partita in corso: <strong>{gameScore}</strong> su {target} punti
-              · domande {Math.min(game.results.length, maxQuestions(target))} di {maxQuestions(target)} · {WORLDS[world]!.name}
+              <span aria-hidden="true">{WORLDS[world]!.icon}</span> Partita in corso: <strong>{gameScore}</strong> su {rules.goal} punti
+              · domande {Math.min(game.results.length, rules.limit)} di {rules.limit} · {WORLDS[world]!.name}
+              {prize && <> · imprevisto: {prizeInfo(prize).title}</>}
             </p>
             <button type="button" className="btn" onClick={onPlay}>
               Continua la partita
@@ -137,6 +142,7 @@ function ResultCard({ result, number }: { result: Result; number: number }) {
           <span className="result-prompt">{result.question.prompt}</span>
           <span className="result-answer">
             {result.timedOut ? 'Tempo scaduto' : result.answer ? result.answer.label : result.typed ? `«${result.typed}»` : 'Passata'}
+            {result.retried && ' · 🃏 seconda risposta'}
           </span>
         </span>
         <span className="result-tier">
