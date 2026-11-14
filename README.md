@@ -21,8 +21,10 @@ di legno fino alla casa di Ale a Varigotti. La partita finisce solo quando ci ar
 - **Domande:** circa 1000, di ogni genere, in ordine casuale diverso per ogni telefono. Escono prima
   quelle mai giocate, mai una ripetuta nella stessa partita e mai due della stessa famiglia vicine
   (per esempio due «Una città del…»); in Impostazioni si può scegliere se, finite quelle, devono ricapitare.
-- **Fasce di rarità:** le risposte di ogni domanda, dalla più comune alla più rara, sono divise così:
-  circa 20% comuni (solo le più ovvie, al massimo 10), 30% non comuni, 27% rare, 15% esclusive, 8% Marco B.
+- **Fasce di rarità:** le risposte di ogni domanda, dalla più comune alla più rara, sono divise in tre
+  parti: circa metà per bada che storia e parata col petto, metà per Shave like a Bomber! e Jonny 🍆,
+  poche per Marco B. Dentro ogni coppia le due fasce hanno lo stesso numero di risposte: le più facili
+  vanno nella prima (bada che storia, Shave like a Bomber!), le meno ovvie nella seconda.
   Le risposte aggiunte da un secondo file per la stessa domanda finiscono una fascia più in alto.
 - **Timer (facoltativo):** in Impostazioni si accende un timer per ogni domanda, da 30 s, 1, 2 o 5 minuti.
   Sta nell'angolo in alto a destra, passa da verde a giallo, arancione e rosso; se finisce, quella

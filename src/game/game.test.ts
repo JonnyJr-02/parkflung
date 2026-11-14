@@ -171,6 +171,13 @@ describe('built-in questions', () => {
     }
   })
 
+  it('have as many comune as non comune answers, and as many raro as esclusivo', () => {
+    for (const raw of [...builtIn.questions, ...derived]) {
+      expect([raw.q, raw.n.length]).toEqual([raw.q, raw.c.length])
+      expect([raw.q, raw.e.length]).toEqual([raw.q, raw.r.length])
+    }
+  })
+
   it('reach the target size', () => {
     expect(bank.length).toBeGreaterThanOrEqual(1000)
   })
@@ -201,22 +208,18 @@ describe('suspense', () => {
 })
 
 describe('gaussian tiers', () => {
-  it('keeps comune small and makes non comune and raro the widest tiers, at least one each', async () => {
+  it('gives comune and non comune the same number of answers, and raro and esclusivo too', async () => {
     const { gaussianSizes } = await import('./bank')
-    expect(gaussianSizes(40)).toEqual([8, 12, 11, 6, 3])
-    expect(gaussianSizes(100)).toEqual([10, 35, 32, 15, 8])
-    expect(gaussianSizes(8)).toEqual([2, 2, 2, 1, 1])
+    expect(gaussianSizes(40)).toEqual([10, 10, 8, 8, 4])
+    expect(gaussianSizes(100)).toEqual([22, 22, 24, 24, 8])
+    expect(gaussianSizes(8)).toEqual([2, 2, 1, 1, 2])
     for (let n = 5; n <= 400; n++) {
       const [c, nc, r, e, t] = gaussianSizes(n) as [number, number, number, number, number]
       expect(c + nc + r + e + t).toBe(n)
       expect(Math.min(c, nc, r, e, t)).toBeGreaterThanOrEqual(1)
-      expect(c).toBeLessThanOrEqual(10)
-      if (n >= 20) {
-        expect(nc).toBeGreaterThanOrEqual(c)
-        expect(r).toBeGreaterThanOrEqual(c)
-        expect(r).toBeGreaterThanOrEqual(e)
-        expect(e).toBeGreaterThanOrEqual(t)
-      }
+      expect(nc).toBe(c)
+      expect(e).toBe(r)
+      if (n >= 20) expect(t).toBeLessThanOrEqual(r)
     }
   })
 
@@ -225,7 +228,10 @@ describe('gaussian tiers', () => {
     const answers = Array.from({ length: 20 }, (_, i) => `a${i}`)
     const cut = gaussianTiers({ q: 'x', c: answers.slice(0, 2), n: answers.slice(2, 5), r: answers.slice(5, 9), e: answers.slice(9, 14), t: answers.slice(14) })
     expect([...cut.c, ...cut.n, ...cut.r, ...cut.e, ...cut.t]).toEqual(answers)
-    expect(cut.c).toEqual(answers.slice(0, 4))
+    expect(cut.c).toEqual(answers.slice(0, 5))
+    expect(cut.n).toEqual(answers.slice(5, 10))
+    expect(cut.r).toEqual(answers.slice(10, 14))
+    expect(cut.e).toEqual(answers.slice(14, 18))
     expect(cut.t).toEqual(['a18', 'a19'])
   })
 })

@@ -5,17 +5,17 @@ import { TIERS, type Tier } from './tiers'
 const packs = import.meta.glob<string>('../data/*.txt', { query: '?raw', import: 'default', eager: true })
 
 /**
- * Share of a question's answers in each tier, commonest first. "Comune" keeps only the answers
- * almost everyone gives; "non comune" and "raro" are the widest, so an answer that is just a bit
- * less obvious already climbs; then fewer "esclusivo" and the fewest "Marco B.".
+ * First cut of a question's answers along the curve, commonest first. It decides how many answers
+ * go to the easy pair (comune + non comune), to the rare pair (raro + esclusivo) and to Marco B.;
+ * gaussianSizes then splits each pair in two equal halves.
  */
 export const GAUSSIAN_SHARE = [0.2, 0.3, 0.27, 0.15, 0.08] as const
 
 /** "Comune" never holds more than this many answers, however long the list: the rest climb. */
 export const MAX_COMMON = 10
 
-/** How many answers go in each tier for a question with `n` answers: at least one each, largest remainders first. */
-export function gaussianSizes(n: number): number[] {
+/** First cut along the curve: at least one each, largest remainders first, comune capped. */
+function curveSizes(n: number): number[] {
   const exact = GAUSSIAN_SHARE.map((share) => share * n)
   const sizes = exact.map((x) => Math.max(1, Math.floor(x)))
   let total = sizes.reduce((sum, size) => sum + size, 0)
@@ -35,6 +35,34 @@ export function gaussianSizes(n: number): number[] {
     sizes[2]! += Math.floor(extra / 2)
   }
   return sizes
+}
+
+/**
+ * How many answers go in each tier for a question with `n` answers. Comune and non comune get the
+ * same number (the easier half is comune), and so do raro and esclusivo (the easier half is raro):
+ * each pair keeps the answers the curve gives it, split in two. When a pair is odd, its rarest
+ * answer moves up one tier: from non comune to raro, or from esclusivo to Marco B. (or the other way
+ * for the second pair, when Marco B. already has more than its share).
+ */
+export function gaussianSizes(n: number): number[] {
+  const [c, nc, r, e, t] = curveSizes(n) as [number, number, number, number, number]
+  let common = c + nc
+  let rare = r + e
+  let top = t
+  if (common % 2 === 1) {
+    common -= 1
+    rare += 1
+  }
+  if (rare % 2 === 1) {
+    if (top > 1 && top > GAUSSIAN_SHARE[4] * n) {
+      rare += 1
+      top -= 1
+    } else {
+      rare -= 1
+      top += 1
+    }
+  }
+  return [common / 2, common / 2, rare / 2, rare / 2, top]
 }
 
 /**
