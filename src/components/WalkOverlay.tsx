@@ -1,24 +1,43 @@
 import { useEffect, useRef, useState } from 'react'
-import { MAX_SCORE, STOPS, TIER_INFO, type Outcome } from '../game/tiers'
+import { stopsFor, TIER_INFO, worldOf, WORLDS, type Outcome } from '../game/tiers'
 import { Scene } from './Scene'
 
 /**
  * Full-screen walk after each scoring answer: the whole trail, the camera closes in on the walker,
- * follows him to his new place, then pulls back. Tap anywhere to skip ahead.
+ * follows him to his new place, then pulls back. When he walks into a new world the weather
+ * changes once he gets there. Tap anywhere to skip ahead.
  */
-export function WalkOverlay({ from, to, outcome, onDone }: { from: number; to: number; outcome: Outcome; onDone: () => void }) {
+export function WalkOverlay({
+  from,
+  to,
+  target,
+  outcome,
+  onDone,
+}: {
+  from: number
+  to: number
+  target: number
+  outcome: Outcome
+  onDone: () => void
+}) {
   const [points, setPoints] = useState(from)
   const [arrived, setArrived] = useState(false)
   const doneRef = useRef(onDone)
   doneRef.current = onDone
   const finished = useRef(false)
-  const passed = STOPS.filter((stop) => from < stop && to >= stop)
+  const shownTo = Math.min(to, target)
+  const worldFrom = worldOf(from, target)
+  const worldTo = worldOf(shownTo, target)
+  const stops = stopsFor(target)
+  const passed = stops.filter((stop) => from < stop && to >= stop)
   const milestone =
-    to >= MAX_SCORE && from < MAX_SCORE
+    to >= target && from < target
       ? 'Sei arrivato alla casa di Ale a Varigotti!'
-      : passed.length > 0
-        ? `Tappa ${STOPS.indexOf(passed[passed.length - 1]!) + 1} superata!`
-        : null
+      : worldTo > worldFrom
+        ? `Nuovo mondo: ${WORLDS[worldTo]!.icon} ${WORLDS[worldTo]!.name}!`
+        : passed.length > 0
+          ? `Tappa ${stops.indexOf(passed[passed.length - 1]!) + 1} superata!`
+          : null
 
   function finish() {
     if (finished.current) return
@@ -27,28 +46,38 @@ export function WalkOverlay({ from, to, outcome, onDone }: { from: number; to: n
   }
 
   useEffect(() => {
-    const start = window.setTimeout(() => setPoints(to), 450)
+    const start = window.setTimeout(() => setPoints(shownTo), 450)
     return () => clearTimeout(start)
-  }, [to])
+  }, [shownTo])
 
   useEffect(() => {
     if (!arrived) return
-    const end = window.setTimeout(finish, 2200)
+    // A new world gets a little longer, to enjoy the new weather.
+    const end = window.setTimeout(finish, worldTo > worldFrom ? 3400 : 2200)
     return () => clearTimeout(end)
   }, [arrived])
 
   return (
-    <div className="walk" role="dialog" aria-modal="true" aria-label={`L'omino cammina fino a ${to} punti`} onClick={finish}>
-      <Scene className="walk-scene" points={points} camera msPer100={3000} label={`Il sentiero: ${to} punti su ${MAX_SCORE}`} onArrive={() => setArrived(true)} />
+    <div className="walk" role="dialog" aria-modal="true" aria-label={`L'omino cammina fino a ${shownTo} punti`} onClick={finish}>
+      <Scene
+        className="walk-scene"
+        points={points}
+        target={target}
+        world={arrived ? worldTo : worldFrom}
+        camera
+        msPer100={3000 * (500 / target)}
+        label={`Il sentiero: ${shownTo} punti su ${target}`}
+        onArrive={() => setArrived(true)}
+      />
       <div className={`walk-top tier-${outcome}`}>
         <span className="chip">{TIER_INFO[outcome].label}</span>
         <span className="walk-gain">+{to - from}</span>
       </div>
       <div className={`walk-bottom ${arrived ? 'show' : ''}`}>
         <p className="walk-total">
-          <strong>{to}</strong> / {MAX_SCORE}
+          <strong>{shownTo}</strong> / {target}
         </p>
-        {milestone && <p className="walk-stop">{milestone}</p>}
+        {milestone && <p className={worldTo > worldFrom ? 'walk-stop new-world' : 'walk-stop'}>{milestone}</p>}
         <p className="walk-hint">Tocca per continuare</p>
       </div>
     </div>

@@ -22,13 +22,40 @@ export const TIER_INFO: Record<Outcome, TierInfo> = {
   t: { label: 'Marco B.', rarity: 'Farflung', points: 100 },
 }
 
-export const QUESTIONS_PER_GAME = 5
-export const MAX_SCORE = QUESTIONS_PER_GAME * TIER_INFO.t.points
-/** Intermediate stops along the trail, evenly spaced between the cart (0) and the house (MAX_SCORE). */
-export const STOPS: readonly number[] = [100, 200, 300, 400]
+/** Points needed to reach the house of Ale: chosen in Impostazioni. */
+export const TARGETS = [500, 1000] as const
+export type Target = (typeof TARGETS)[number]
+export const DEFAULT_TARGET: Target = 500
+export const MAX_SCORE: Target = DEFAULT_TARGET
 
-/** How many stops a score has reached: 0 at the cart, STOPS.length + 1 at the yellow house. */
-export function stopsReached(score: number): number {
-  if (score >= MAX_SCORE) return STOPS.length + 1
-  return STOPS.filter((stop) => score >= stop).length
+export function isTarget(value: unknown): value is Target {
+  return TARGETS.includes(value as Target)
+}
+
+/** Four stops between the cart and the house, one every fifth of the way: 100…400, or 200…800. */
+export function stopsFor(target: number): number[] {
+  return [1, 2, 3, 4].map((k) => (target * k) / 5)
+}
+
+/** Kept for the 500-point trail drawn on the home poster. */
+export const STOPS: readonly number[] = stopsFor(DEFAULT_TARGET)
+
+/** How many stops a score has reached: 0 at the cart, 5 at the house. */
+export function stopsReached(score: number, target: number = DEFAULT_TARGET): number {
+  if (score >= target) return 5
+  return stopsFor(target).filter((stop) => score >= stop).length
+}
+
+/** The weather along the trail: a world for each fifth of the way, from the storm to the sunset. */
+export const WORLDS = [
+  { name: 'Temporale', icon: '⛈️', note: 'pioggia e fulmini' },
+  { name: 'Pioggerella', icon: '🌧️', note: 'pioviggina' },
+  { name: 'Nuvole e sole', icon: '⛅', note: "un po' nuvoloso, ma spunta il sole" },
+  { name: 'Sole', icon: '☀️', note: 'cielo sereno' },
+  { name: 'Tramonto', icon: '🌅', note: 'un tramonto bellissimo sul mare' },
+] as const
+
+/** Which world a score is in: 0 (storm) … 4 (sunset). The house itself is reached at the target. */
+export function worldOf(score: number, target: number = DEFAULT_TARGET): number {
+  return Math.max(0, Math.min(4, Math.floor(score / (target / 5))))
 }

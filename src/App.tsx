@@ -1,80 +1,133 @@
 import { useMemo, useState } from 'react'
 import { Finale } from './components/Finale'
-import { Game, type Result } from './components/Game'
+import { Game, scoreOf, type Result } from './components/Game'
 import { Home, Settings, Summary } from './components/Screens'
-import { mergeBank, pickQuestions } from './game/bank'
+import { mergeBank, pickNext } from './game/bank'
 import type { Question } from './game/parse'
-import { getState, recordGame, useSavedState } from './game/store'
-import { QUESTIONS_PER_GAME, TIER_INFO } from './game/tiers'
+import { getState, recordGame, saveGame, useSavedState, type SavedGame, type SavedResult } from './game/store'
+import { DEFAULT_TARGET, type Target } from './game/tiers'
 
 type View =
   | { name: 'home' }
   | { name: 'settings' }
-  | { name: 'game'; id: number; questions: Question[]; timer: number }
-  /** The full-screen ending, then the summary. */
-  | { name: 'finale'; results: Result[] }
-  | { name: 'summary'; results: Result[] }
+  | { name: 'game'; id: number; target: Target; timer: number; start: { results: Result[]; question: Question } }
+  /** The arrival at the house of Ale, then the summary. */
+  | { name: 'finale'; results: Result[]; target: Target }
+  | { name: 'summary'; results: Result[]; target: Target }
 
-/** In development, `?finale=430` opens the ending with that score, to try every version of it. */
-function firstView(): View {
-  if (!import.meta.env.DEV) return { name: 'home' }
-  const points = new URLSearchParams(location.search).get('finale')
-  if (points === null) return { name: 'home' }
-  const outcomes = Array.from({ length: 5 }, (_, i): Result['outcome'] => {
-    const left = Number(points) - i * 100
-    return left >= 100 ? 't' : left >= 75 ? 'e' : left >= 50 ? 'r' : left >= 25 ? 'n' : left >= 10 ? 'c' : 'miss'
-  })
+function toSaved(result: Result): SavedResult {
   return {
-    name: 'finale',
-    results: outcomes.map((outcome, i) => ({ question: { id: `prova-${i}`, prompt: `Domanda di prova ${i + 1}`, answers: [] }, typed: '', outcome })),
+    id: result.question.id,
+    prompt: result.question.prompt,
+    typed: result.typed,
+    outcome: result.outcome,
+    answer: result.answer?.label,
+    timedOut: result.timedOut,
   }
+}
+
+/** In development, `?finale` opens the arrival with a made-up game, to try it quickly. */
+function firstView(): View {
+  if (!import.meta.env.DEV || !new URLSearchParams(location.search).has('finale')) return { name: 'home' }
+  const results: Result[] = Array.from({ length: 7 }, (_, i) => ({
+    question: { id: `prova-${i}`, prompt: `Domanda di prova ${i + 1}`, answers: [] },
+    typed: '',
+    outcome: i % 2 ? 't' : 'e',
+  }))
+  return { name: 'finale', results, target: DEFAULT_TARGET }
 }
 
 export function App() {
   const saved = useSavedState()
   const bank = useMemo(() => mergeBank(saved.custom), [saved.custom])
+  const byId = useMemo(() => new Map(bank.map((question) => [question.id, question])), [bank])
   const [view, setView] = useState<View>(firstView)
 
-  function play() {
-    const { seen, repeat, timerOn, timerSeconds } = getState()
-    const questions = pickQuestions(bank, seen, QUESTIONS_PER_GAME, repeat)
-    // With repetition off and the new questions used up, Home explains what to do.
-    if (questions.length < QUESTIONS_PER_GAME) setView({ name: 'home' })
-    else setView({ name: 'game', id: Date.now(), questions, timer: timerOn ? timerSeconds : 0 })
+  function toResult(result: SavedResult): Result {
+    const question = byId.get(result.id) ?? { id: result.id, prompt: result.prompt, answers: [] }
+    return {
+      question,
+      typed: result.typed,
+      outcome: result.outcome,
+      answer: question.answers.find((answer) => answer.label === result.answer),
+      timedOut: result.timedOut,
+    }
   }
 
-  function finish(results: Result[]) {
+  /** Never stuck: with repetition off and no new question left, the oldest ones come back anyway. */
+  function nextQuestion(asked: Question[]): Question {
+    const { seen, repeat } = getState()
+    return pickNext(bank, seen, asked, repeat) ?? pickNext(bank, seen, asked, true) ?? bank[0]!
+  }
+
+  function open(game: SavedGame) {
+    const { timerOn, timerSeconds } = getState()
+    const results = game.results.map(toResult)
+    const pending = game.pending ? byId.get(game.pending) : undefined
+    const answered = new Set(game.results.map((result) => result.id))
+    const question = pending && !answered.has(pending.id) ? pending : nextQuestion(results.map((result) => result.question))
+    saveGame({ ...game, pending: question.id })
+    setView({ name: 'game', id: Date.now(), target: game.target, timer: timerOn ? timerSeconds : 0, start: { results, question } })
+  }
+
+  function newGame() {
+    open({ target: getState().target, startedAt: Date.now(), results: [] })
+  }
+
+  function play() {
+    const { current } = getState()
+    if (current) open(current)
+    else newGame()
+  }
+
+  function save(target: Target, results: Result[], onScreen: Question | null) {
+    saveGame({
+      target,
+      startedAt: getState().current?.startedAt ?? Date.now(),
+      results: results.map(toSaved),
+      pending: onScreen?.id,
+    })
+  }
+
+  function finish(target: Target, results: Result[]) {
     recordGame({
       at: Date.now(),
-      score: results.reduce((sum, result) => sum + TIER_INFO[result.outcome].points, 0),
+      score: scoreOf(results),
       outcomes: results.map((result) => result.outcome),
+      target,
+      questions: results.length,
     })
-    setView({ name: 'finale', results })
+    saveGame(null)
+    setView({ name: 'finale', results, target })
   }
 
   switch (view.name) {
     case 'home':
-      return <Home bank={bank} onPlay={play} onSettings={() => setView({ name: 'settings' })} />
+      return <Home bank={bank} onPlay={play} onNewGame={newGame} onSettings={() => setView({ name: 'settings' })} />
     case 'settings':
       return <Settings bank={bank} onBack={() => setView({ name: 'home' })} />
     case 'game':
       return (
         <Game
           key={view.id}
-          questions={view.questions}
+          target={view.target}
           timer={view.timer}
-          onFinish={finish}
+          start={view.start}
+          nextQuestion={nextQuestion}
+          onSave={(results, onScreen) => save(view.target, results, onScreen)}
+          onFinish={(results) => finish(view.target, results)}
           onQuit={() => setView({ name: 'home' })}
         />
       )
     case 'finale':
       return (
         <Finale
-          score={view.results.reduce((sum, result) => sum + TIER_INFO[result.outcome].points, 0)}
-          onDone={() => setView({ name: 'summary', results: view.results })}
+          target={view.target}
+          questions={view.results.length}
+          onDone={() => setView({ name: 'summary', results: view.results, target: view.target })}
         />
       )
     case 'summary':
-      return <Summary results={view.results} onAgain={play} onHome={() => setView({ name: 'home' })} />
+      return <Summary results={view.results} target={view.target} onAgain={newGame} onHome={() => setView({ name: 'home' })} />
   }
 }

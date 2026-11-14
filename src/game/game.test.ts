@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { builtIn, derived, family, LETTER_GROUPS, MIN_LETTER_ANSWERS, mergeBank, mergeCustom, pickQuestions } from './bank'
+import { builtIn, derived, family, LETTER_GROUPS, MIN_LETTER_ANSWERS, mergeBank, mergeCustom, pickNext } from './bank'
 import { editDistance, matchAnswer, stem, tokenize } from './match'
 import { compile, parseJson, parseText, parseUpload, type RawQuestion } from './parse'
-import { MAX_SCORE, STOPS, stopsReached, TIERS } from './tiers'
+import { MAX_SCORE, stopsFor, stopsReached, TIERS, worldOf, WORLDS } from './tiers'
 
 const fruit: RawQuestion = {
   q: 'Un frutto',
@@ -93,29 +93,28 @@ describe('reading question files', () => {
 describe('choosing questions', () => {
   const bank = Array.from({ length: 8 }, (_, i) => compile({ ...fruit, q: `Domanda ${i}` }))
 
-  it('prefers questions never played', () => {
+  it('prefers questions never played, and never repeats one in the same game', () => {
     const seen = Object.fromEntries(bank.slice(0, 3).map((question, i) => [question.id, i + 1]))
-    const picked = pickQuestions(bank, seen, 5)
-    expect(picked).toHaveLength(5)
-    expect(picked.every((question) => seen[question.id] === undefined)).toBe(true)
+    const asked = [bank[3]!, bank[4]!]
+    for (let run = 0; run < 30; run++) {
+      const next = pickNext(bank, seen, asked)!
+      expect(seen[next.id]).toBeUndefined()
+      expect(asked.map((question) => question.id)).not.toContain(next.id)
+    }
   })
 
-  it('falls back to the ones played longest ago', () => {
-    const seen = Object.fromEntries(bank.slice(0, 6).map((question, i) => [question.id, i + 1]))
-    const picked = pickQuestions(bank, seen, 5).map((question) => question.id)
-    expect(new Set(picked).size).toBe(5)
-    expect(picked).toContain(bank[6]!.id)
-    expect(picked).toContain(bank[7]!.id)
-    expect(picked).not.toContain(bank[5]!.id)
+  it('brings back the ones played longest ago when the new ones are over', () => {
+    const seen = Object.fromEntries(bank.map((question, i) => [question.id, i + 1]))
+    const next = pickNext(bank, seen, [bank[0]!])!
+    expect(next.id).not.toBe(bank[0]!.id)
   })
 
-  it('never brings a played question back when repeating is off', () => {
-    const seen = Object.fromEntries(bank.slice(0, 6).map((question, i) => [question.id, i + 1]))
-    const picked = pickQuestions(bank, seen, 5, false).map((question) => question.id)
-    expect(picked.sort()).toEqual([bank[6]!.id, bank[7]!.id].sort())
+  it('stops when repeating is off and no new question is left', () => {
+    const seen = Object.fromEntries(bank.map((question, i) => [question.id, i + 1]))
+    expect(pickNext(bank, seen, [], false)).toBeNull()
   })
 
-  it('never puts two look-alike questions in one game', () => {
+  it('keeps look-alike questions apart', () => {
     expect(family('Una città del Giappone')).toBe(family("Una città dell'Austria"))
     expect(family('Un piatto della cucina cinese')).toBe(family('Un piatto tipico della cucina romana'))
     expect(family('Un animale che inizia con la C')).toBe(family('Una marca che inizia con la B'))
@@ -123,8 +122,8 @@ describe('choosing questions', () => {
     const prompts = ['Una città del Giappone', 'Una città della Spagna', 'Una città del Brasile', 'Un frutto', 'Un fiore', 'Un colore', 'Un mestiere']
     const mixed = prompts.map((q) => compile({ ...fruit, q }))
     for (let run = 0; run < 30; run++) {
-      const kinds = pickQuestions(mixed, {}, 5).map((question) => family(question.prompt))
-      expect(new Set(kinds).size).toBe(5)
+      const next = pickNext(mixed, {}, [mixed[0]!])!
+      expect(family(next.prompt)).not.toBe(family(mixed[0]!.prompt))
     }
   })
 
@@ -132,13 +131,6 @@ describe('choosing questions', () => {
     const merged = mergeCustom([fruit], [{ ...fruit, c: ['pera'] }, { ...fruit, q: 'Altro' }])
     expect(merged).toMatchObject({ added: 1, replaced: 1 })
     expect(merged.custom).toHaveLength(2)
-  })
-})
-
-describe('score', () => {
-  it('has four stops before the house', () => {
-    expect(MAX_SCORE).toBe(500)
-    expect([0, 99, 100, 250, 499, 500].map(stopsReached)).toEqual([0, 0, 1, 2, 4, 5])
   })
 })
 
@@ -249,11 +241,19 @@ describe('timer', () => {
   })
 })
 
-describe('ending', () => {
-  it('has one version for the cart, each stop and the house', async () => {
-    const { FINALE_TEXT } = await import('../components/Finale')
-    expect(FINALE_TEXT).toHaveLength(STOPS.length + 2)
-    expect([0, 120, 260, 399, 400, 500].map(stopsReached)).toEqual([0, 1, 2, 3, 4, 5])
-    expect(FINALE_TEXT[5]!.title).toContain('casa di Ale a Varigotti')
+describe('a game until the house', () => {
+  it('has four stops and five worlds on the way, at 500 or 1000 points', () => {
+    expect(MAX_SCORE).toBe(500)
+    expect(stopsFor(500)).toEqual([100, 200, 300, 400])
+    expect(stopsFor(1000)).toEqual([200, 400, 600, 800])
+    expect([0, 99, 100, 250, 499, 500].map((score) => stopsReached(score, 500))).toEqual([0, 0, 1, 2, 4, 5])
+    expect(WORLDS).toHaveLength(5)
+    expect([0, 99, 100, 199, 200, 300, 400, 499, 500].map((score) => worldOf(score, 500))).toEqual([0, 0, 1, 1, 2, 3, 4, 4, 4])
+    expect([0, 199, 200, 600, 999].map((score) => worldOf(score, 1000))).toEqual([0, 0, 1, 3, 4])
+  })
+
+  it('ends with the arrival at the house of Ale', async () => {
+    const { ARRIVAL_TITLE } = await import('../components/Finale')
+    expect(ARRIVAL_TITLE).toContain('casa di Ale a Varigotti')
   })
 })

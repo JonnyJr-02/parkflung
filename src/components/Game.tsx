@@ -2,10 +2,11 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 
 import { matchAnswer, type Answer } from '../game/match'
 import type { Question } from '../game/parse'
 import { markSeen } from '../game/store'
-import { MAX_SCORE, STOPS, TIER_INFO, type Outcome } from '../game/tiers'
+import { stopsFor, TIER_INFO, worldOf, WORLDS, type Outcome } from '../game/tiers'
 import { Farflung } from './Farflung'
 import { RarityMeter } from './RarityMeter'
 import { Timer } from './Timer'
+import { WeatherStrip } from './Weather'
 import { WalkOverlay } from './WalkOverlay'
 
 export interface Result {
@@ -31,15 +32,16 @@ type Phase =
   | { kind: 'reveal' }
 
 /** A thin trail along the top: where the walker is, and the four stops. */
-function Track({ score }: { score: number }) {
+function Track({ score, target }: { score: number; target: number }) {
+  const at = Math.min(1, score / target)
   return (
     <div className="track" aria-hidden="true">
       <span className="track-line" />
-      <span className="track-fill" style={{ transform: `scaleX(${score / MAX_SCORE})` }} />
-      {STOPS.map((stop) => (
-        <span key={stop} className={score >= stop ? 'track-stop reached' : 'track-stop'} style={{ left: `${(stop / MAX_SCORE) * 100}%` }} />
+      <span className="track-fill" style={{ transform: `scaleX(${at})` }} />
+      {stopsFor(target).map((stop) => (
+        <span key={stop} className={score >= stop ? 'track-stop reached' : 'track-stop'} style={{ left: `${(stop / target) * 100}%` }} />
       ))}
-      <span className="track-walker" style={{ left: `${(score / MAX_SCORE) * 100}%` }} />
+      <span className="track-walker" style={{ left: `${at * 100}%` }} />
       <span className="track-house" />
     </div>
   )
@@ -59,34 +61,51 @@ function Prompt({ text }: { text: string }) {
   )
 }
 
+export function scoreOf(results: readonly Result[]): number {
+  return results.reduce((sum, result) => sum + TIER_INFO[result.outcome].points, 0)
+}
+
+/**
+ * A game: one question after another until the walker reaches the house of Ale at `target`
+ * points. Every answer is saved, so the game can be left and picked up again.
+ */
 export function Game({
-  questions,
+  target,
   timer,
+  start,
+  nextQuestion,
+  onSave,
   onFinish,
   onQuit,
 }: {
-  questions: Question[]
+  target: number
   /** Seconds for each question, 0 for no timer. */
   timer: number
+  /** What was already answered (when picking up a saved game) and the question to show now. */
+  start: { results: Result[]; question: Question }
+  nextQuestion: (asked: Question[]) => Question
+  onSave: (results: Result[], onScreen: Question | null) => void
   onFinish: (results: Result[]) => void
   onQuit: () => void
 }) {
-  const [results, setResults] = useState<Result[]>([])
+  const [results, setResults] = useState<Result[]>(start.results)
+  const [question, setQuestion] = useState<Question>(start.question)
   const [typed, setTyped] = useState('')
   const [phase, setPhase] = useState<Phase>({ kind: 'ask' })
   const inputRef = useRef<HTMLInputElement>(null)
   const nextRef = useRef<HTMLButtonElement>(null)
 
-  const index = phase.kind === 'reveal' || phase.kind === 'walk' ? results.length - 1 : results.length
-  const question = questions[index]!
-  const score = results.reduce((sum, result) => sum + TIER_INFO[result.outcome].points, 0)
+  const score = scoreOf(results)
   const last = results[results.length - 1]
-  const isLastQuestion = index === questions.length - 1
+  const arrived = score >= target
+  const committed = phase.kind === 'reveal' || phase.kind === 'walk'
+  const number = committed ? results.length : results.length + 1
+  const world = worldOf(score, target)
 
   useEffect(() => {
     if (phase.kind === 'ask') inputRef.current?.focus({ preventScroll: true })
     if (phase.kind === 'reveal') nextRef.current?.focus({ preventScroll: true })
-  }, [phase.kind, index])
+  }, [phase.kind, question.id])
 
   function startSuspense(outcome: Outcome, answer?: Answer) {
     markSeen([question.id])
@@ -103,7 +122,9 @@ export function Game({
   }
 
   function commit(result: Result) {
-    setResults((current) => [...current, result])
+    const now = [...results, result]
+    setResults(now)
+    onSave(now, null)
     // Every answer that scores ends with the walker crossing the trail, full screen.
     setPhase(TIER_INFO[result.outcome].points > 0 ? { kind: 'walk', from: score, outcome: result.outcome } : { kind: 'reveal' })
   }
@@ -118,10 +139,13 @@ export function Game({
   }
 
   function next() {
-    if (isLastQuestion) {
+    if (arrived) {
       onFinish(results)
       return
     }
+    const upcoming = nextQuestion(results.map((result) => result.question))
+    onSave(results, upcoming)
+    setQuestion(upcoming)
     setTyped('')
     setPhase({ kind: 'ask' })
   }
@@ -130,21 +154,21 @@ export function Game({
 
   return (
     <main className={timer > 0 ? 'screen game has-timer' : 'screen game'}>
-      {timer > 0 && <Timer key={index} seconds={timer} running={answering} onExpire={timeUp} />}
+      {timer > 0 && <Timer key={question.id} seconds={timer} running={answering} onExpire={timeUp} />}
       <header className="game-top">
         <button type="button" className="link" onClick={onQuit}>
           Esci
         </button>
-        <p className="game-count" key={index}>
-          Domanda {index + 1} di {questions.length}
+        <p className="game-count" key={number} aria-label={`Domanda ${number}, mondo ${WORLDS[world]!.name}`}>
+          <span aria-hidden="true">{WORLDS[world]!.icon}</span> Domanda {number}
         </p>
-        <p className="game-score" aria-label={`${score} punti su ${MAX_SCORE}`}>
-          {score}
-          <small>/{MAX_SCORE}</small>
+        <p className="game-score" aria-label={`${Math.min(score, target)} punti su ${target}`}>
+          {Math.min(score, target)}
+          <small>/{target}</small>
         </p>
       </header>
 
-      <Track score={score} />
+      <Track score={score} target={target} />
 
       <div className="game-body">
         {answering && (
@@ -192,6 +216,7 @@ export function Game({
 
         {phase.kind === 'reveal' && last && (
           <section className={`reveal tier-${last.outcome}`} aria-live="polite">
+            <WeatherStrip world={world} arrived={arrived} />
             <p className="reveal-prompt">{last.question.prompt}</p>
             <p className="reveal-label">{TIER_INFO[last.outcome].label}</p>
             <p className="reveal-answer">
@@ -205,11 +230,11 @@ export function Game({
             </p>
             <p className="reveal-move">
               {TIER_INFO[last.outcome].points > 0
-                ? `+${TIER_INFO[last.outcome].points} punti · sei a ${score} su ${MAX_SCORE}`
+                ? `+${TIER_INFO[last.outcome].points} punti · sei a ${Math.min(score, target)} su ${target}`
                 : "Nessun passo avanti: l'omino resta fermo"}
             </p>
             <button ref={nextRef} type="button" className="btn" onClick={next}>
-              {isLastQuestion ? 'Guarda dove sei arrivato' : 'Prossima domanda'}
+              {arrived ? 'Entra nella casa di Ale' : 'Prossima domanda'}
             </button>
           </section>
         )}
@@ -235,7 +260,7 @@ export function Game({
       {phase.kind === 'celebrate' && <Farflung answer={phase.result.answer?.label ?? ''} onDone={() => commit(phase.result)} />}
 
       {phase.kind === 'walk' && (
-        <WalkOverlay from={phase.from} to={score} outcome={phase.outcome} onDone={() => setPhase({ kind: 'reveal' })} />
+        <WalkOverlay from={phase.from} to={score} target={target} outcome={phase.outcome} onDone={() => setPhase({ kind: 'reveal' })} />
       )}
     </main>
   )

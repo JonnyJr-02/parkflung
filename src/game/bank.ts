@@ -362,17 +362,6 @@ export function mergeCustom(
   return { custom: [...byId.values()], added, replaced }
 }
 
-function shuffle<T>(items: readonly T[], random: () => number): T[] {
-  const out = [...items]
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1))
-    const held = out[i]!
-    out[i] = out[j]!
-    out[j] = held
-  }
-  return out
-}
-
 /**
  * Questions of one family look alike ("Una città del Giappone", "Una città della Spagna"):
  * the family is the first word that is not an article, and every letter question is one family.
@@ -382,43 +371,36 @@ export function family(prompt: string): string {
   return tokenize(prompt)[0] ?? prompt
 }
 
-/** Takes `count` questions in the given order, skipping a family already taken while others are left. */
-function spread(ordered: readonly Question[], count: number): Question[] {
-  const used = new Set<string>()
-  const first: Question[] = []
-  const rest: Question[] = []
-  for (const question of ordered) {
-    const kind = family(question.prompt)
-    if (first.length < count && !used.has(kind)) {
-      used.add(kind)
-      first.push(question)
-    } else rest.push(question)
-  }
-  return [...first, ...rest].slice(0, count)
-}
+/** How many of the last questions of a game keep their family away from the next one. */
+const FAMILY_MEMORY = 4
 
 /**
- * Never-played questions first, in random order, no two of the same family. When they run out and
- * `repeat` is on, the ones played longest ago come back; with `repeat` off the result can hold
- * fewer than `count`.
+ * The next question of a game, which goes on until the house. Never one already asked in this
+ * game; never-played questions first, and none of the same family as the last few. When the new
+ * ones are over and `repeat` is on, the ones played longest ago come back; with `repeat` off the
+ * result is null.
  */
-export function pickQuestions(
+export function pickNext(
   bank: readonly Question[],
   seen: Readonly<Record<string, number>>,
-  count: number,
+  asked: readonly Question[],
   repeat = true,
   random: () => number = Math.random,
-): Question[] {
-  const fresh = shuffle(
-    bank.filter((question) => seen[question.id] === undefined),
-    random,
-  )
-  if (fresh.length >= count || !repeat) return spread(fresh, count)
-  const played = shuffle(
-    bank.filter((question) => seen[question.id] !== undefined),
-    random,
-  ).sort((a, b) => seen[a.id]! - seen[b.id]!)
-  return shuffle(spread([...fresh, ...played], count), random)
+): Question | null {
+  const askedIds = new Set(asked.map((question) => question.id))
+  const recent = new Set(asked.slice(-FAMILY_MEMORY).map((question) => family(question.prompt)))
+  const pick = (from: readonly Question[]) => from[Math.floor(random() * from.length)] ?? null
+  const varied = (from: readonly Question[]) => from.filter((question) => !recent.has(family(question.prompt)))
+
+  const fresh = bank.filter((question) => seen[question.id] === undefined && !askedIds.has(question.id))
+  if (fresh.length > 0) return pick(varied(fresh).length > 0 ? varied(fresh) : fresh)
+  if (!repeat) return null
+  // Among the ones played longest ago, a few to choose from, so the order still feels random.
+  const old = bank
+    .filter((question) => !askedIds.has(question.id))
+    .sort((a, b) => (seen[a.id] ?? 0) - (seen[b.id] ?? 0))
+    .slice(0, 30)
+  return pick(varied(old).length > 0 ? varied(old) : old)
 }
 
 export function countFresh(bank: readonly Question[], seen: Readonly<Record<string, number>>): number {

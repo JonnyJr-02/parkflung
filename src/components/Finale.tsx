@@ -1,16 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type CSSProperties } from 'react'
-import { MAX_SCORE, STOPS, stopsReached } from '../game/tiers'
+import { WORLDS } from '../game/tiers'
 import { Walker } from './Scene'
-
-/** What each ending says, by how many stops were reached: 0 is the cart, 5 the house of Ale. */
-export const FINALE_TEXT: ReadonlyArray<{ title: string; note: string }> = [
-  { title: 'Ancora al carro di legno', note: 'Nessuna tappa questa volta: il sentiero ti aspetta.' },
-  { title: 'Prima tappa!', note: 'Hai lasciato il carro e superato i 100 punti.' },
-  { title: 'Seconda tappa!', note: 'Duecento punti: sei a buon punto del sentiero.' },
-  { title: 'Terza tappa!', note: 'Trecento punti: dalla collina si vede già il mare.' },
-  { title: 'Quarta tappa!', note: 'La casa di Ale a Varigotti era a un passo.' },
-  { title: 'Sei arrivato alla casa di Ale a Varigotti!', note: 'Punteggio perfetto: 500 su 500.' },
-]
 
 /**
  * How big the party is at each ending: the more stops, the more confetti and balloons; fireworks
@@ -226,14 +216,14 @@ function House() {
   )
 }
 
+export const ARRIVAL_TITLE = 'Sei arrivato alla casa di Ale a Varigotti!'
+
 /**
- * Full-screen ending, before the summary. Its size follows the stops reached: a rain cloud at the
- * cart, then more and more confetti and balloons, fireworks from the fourth stop, and at 500 the
- * house of Ale with the whole show.
+ * Full-screen arrival at the house of Ale, the end of a game: night sky, fireworks, confetti,
+ * balloons, the house with lit windows and the walker waving his frond. Then the summary.
  */
-export function Finale({ score, onDone }: { score: number; onDone: () => void }) {
-  const level = stopsReached(score)
-  const { title, note } = FINALE_TEXT[level]!
+export function Finale({ target, questions, onDone }: { target: number; questions: number; onDone: () => void }) {
+  const level = 5
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [shown, setShown] = useState(0)
@@ -243,27 +233,27 @@ export function Finale({ score, onDone }: { score: number; onDone: () => void })
     const canvas = canvasRef.current
     if (!canvas || prefersReducedMotion()) return
     return startShow(canvas, level)
-  }, [level])
+  }, [])
 
   // The score counts up, then the button appears.
   useEffect(() => {
     if (prefersReducedMotion()) {
-      setShown(score)
+      setShown(target)
       setReady(true)
       return
     }
     const start = performance.now()
-    const duration = 900 + level * 250
+    const duration = 2100
     let frame = 0
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / duration)
-      setShown(Math.round(score * (1 - Math.pow(1 - t, 3))))
+      setShown(Math.round(target * (1 - Math.pow(1 - t, 3))))
       if (t < 1) frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
-    const timer = window.setTimeout(() => setReady(true), 1600 + level * 450)
+    const timer = window.setTimeout(() => setReady(true), 3800)
     try {
-      if (level >= 4) navigator.vibrate?.(level === 5 ? [80, 60, 80, 60, 80, 60, 260] : [80, 60, 160])
+      navigator.vibrate?.([80, 60, 80, 60, 80, 60, 260])
     } catch {
       // Vibration is a bonus.
     }
@@ -271,42 +261,34 @@ export function Finale({ score, onDone }: { score: number; onDone: () => void })
       cancelAnimationFrame(frame)
       clearTimeout(timer)
     }
-  }, [score, level])
+  }, [target])
 
   useEffect(() => {
     if (ready) buttonRef.current?.focus({ preventScroll: true })
   }, [ready])
 
-  const marks = [...STOPS, MAX_SCORE]
+  const note = `${target} punti in ${questions} ${questions === 1 ? 'domanda' : 'domande'}`
+  const marks = [...WORLDS.map((world) => world.icon), '⌂']
   return (
-    <div className={`finale level-${level}`} role="dialog" aria-modal="true" aria-label={`${title} ${score} punti su ${MAX_SCORE}`}>
-      {level >= 3 && <div className="finale-rays" aria-hidden="true" />}
-      {level === 0 && (
-        <svg className="finale-cloud" viewBox="0 0 120 60" aria-hidden="true">
-          <path d="M20 50 a16 16 0 0 1 4 -31 a22 22 0 0 1 40 -8 a18 18 0 0 1 32 10 a14 14 0 0 1 4 29 z" />
-        </svg>
-      )}
+    <div className={`finale level-${level}`} role="dialog" aria-modal="true" aria-label={`${ARRIVAL_TITLE} ${note}`}>
+      <div className="finale-rays" aria-hidden="true" />
       <canvas ref={canvasRef} className="finale-canvas" aria-hidden="true" />
       <div className="finale-center">
-        {level === 5 && <House />}
-        <p className="finale-kicker">Fine partita</p>
+        <House />
+        <p className="finale-kicker">Traguardo</p>
         <p className="finale-score">
           <strong>{shown}</strong>
-          <small>/{MAX_SCORE}</small>
+          <small>/{target}</small>
         </p>
         <ol className="finale-stops" aria-hidden="true">
           {marks.map((mark, index) => (
-            <li
-              key={mark}
-              className={score >= mark ? (mark === MAX_SCORE ? 'reached house' : 'reached') : mark === MAX_SCORE ? 'house' : ''}
-              style={{ '--i': index } as CSSProperties}
-            >
-              {mark === MAX_SCORE ? '⌂' : mark}
+            <li key={mark} className={index === marks.length - 1 ? 'reached house' : 'reached'} style={{ '--i': index } as CSSProperties}>
+              {mark}
             </li>
           ))}
         </ol>
         <h1 className="finale-title">
-          {title.split(' ').map((word, index) => (
+          {ARRIVAL_TITLE.split(' ').map((word, index) => (
             <Fragment key={index}>
               <span style={{ '--i': index } as CSSProperties}>{word}</span>{' '}
             </Fragment>

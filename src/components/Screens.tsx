@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { builtIn, countFresh, derived, mergeCustom } from '../game/bank'
 import { parseUpload, type Question } from '../game/parse'
 import { TIMER_CHOICES, timerLabel } from '../game/timer'
-import { summarize, update, useSavedState } from '../game/store'
-import { MAX_SCORE, OUTCOMES, QUESTIONS_PER_GAME, STOPS, stopsReached, TIER_INFO, TIERS } from '../game/tiers'
+import { update, useSavedState } from '../game/store'
+import { OUTCOMES, TARGETS, TIER_INFO, TIERS, worldOf, WORLDS } from '../game/tiers'
 import type { Result } from './Game'
 import { Scene } from './Scene'
 
@@ -17,7 +17,7 @@ function GearIcon() {
 }
 
 function homeNote(total: number, fresh: number, repeat: boolean): string {
-  if (!repeat && fresh < QUESTIONS_PER_GAME) {
+  if (!repeat && fresh === 0) {
     return 'Hai finito le domande nuove. Attiva «Ripeti le domande» nelle impostazioni, oppure azzera i progressi.'
   }
   if (!repeat) return `${fresh} domande nuove rimaste su ${total}. Le domande già giocate non ricapitano.`
@@ -25,17 +25,33 @@ function homeNote(total: number, fresh: number, repeat: boolean): string {
   return `Hai giocato tutte le ${total} domande: ora ricapitano, a partire da quelle viste da più tempo.`
 }
 
-export function Home({ bank, onPlay, onSettings }: { bank: Question[]; onPlay: () => void; onSettings: () => void }) {
+export function Home({
+  bank,
+  onPlay,
+  onNewGame,
+  onSettings,
+}: {
+  bank: Question[]
+  onPlay: () => void
+  onNewGame: () => void
+  onSettings: () => void
+}) {
   const saved = useSavedState()
-  const stats = summarize(saved.games)
+  const game = saved.current
+  const target = game?.target ?? saved.target
   const fresh = countFresh(bank, saved.seen)
-  const canPlay = saved.repeat || fresh >= QUESTIONS_PER_GAME
+  const canStart = saved.repeat || fresh > 0
+  const gameScore = game ? game.results.reduce((sum, result) => sum + TIER_INFO[result.outcome].points, 0) : 0
+  const world = game ? worldOf(gameScore, target) : 4
+  const [confirmNew, setConfirmNew] = useState(false)
 
   return (
     <main className="screen home">
       <Scene
         className="hero"
-        points={0}
+        points={gameScore}
+        target={target}
+        world={world}
         label="Un manifesto della riviera: un sentiero parte da un carro di legno e arriva alla casa di Ale a Varigotti, sul mare"
       >
         <button type="button" className="icon-button hero-settings" onClick={onSettings} aria-label="Impostazioni">
@@ -46,23 +62,53 @@ export function Home({ bank, onPlay, onSettings }: { bank: Question[]; onPlay: (
         <h1 className="title">
           Park<em>Flung</em>
         </h1>
-        <p className="lede">Cinque domande. Più la tua risposta è rara, più strada fai verso la casa di Ale&nbsp;a&nbsp;Varigotti.</p>
-        <dl className="stats">
-          <div>
-            <dt>Partite</dt>
-            <dd>{stats.played}</dd>
+        <p className="lede">
+          Una domanda dopo l'altra: più la risposta è rara, più strada fai. Arrivi alla casa di Ale&nbsp;a&nbsp;Varigotti a{' '}
+          {target}&nbsp;punti.
+        </p>
+        <div className="target-choice">
+          <p className="target-label" id="target-label">
+            {game ? 'Prossima partita: casa di Ale a' : 'Casa di Ale a'}
+          </p>
+          <div className="segmented two" role="radiogroup" aria-labelledby="target-label">
+            {TARGETS.map((points) => (
+              <button
+                key={points}
+                type="button"
+                role="radio"
+                aria-checked={saved.target === points}
+                className={saved.target === points ? 'on' : ''}
+                onClick={() => update((current) => ({ ...current, target: points }))}
+              >
+                {points} punti
+              </button>
+            ))}
           </div>
-          <div>
-            <dt>Record</dt>
-            <dd>{stats.best}</dd>
-          </div>
-          <div>
-            <dt>Media</dt>
-            <dd>{stats.average}</dd>
-          </div>
-        </dl>
-        {canPlay ? (
-          <button type="button" className="btn" onClick={onPlay}>
+          <p className="note">
+            Cinque mondi lungo il sentiero, uno ogni {saved.target / 5} punti: temporale, pioggerella, nuvole e sole, sole e tramonto.
+          </p>
+        </div>
+        {game ? (
+          <>
+            <p className="current-game">
+              <span aria-hidden="true">{WORLDS[world]!.icon}</span> Partita in corso: <strong>{gameScore}</strong> su {target} punti
+              · {game.results.length} {game.results.length === 1 ? 'domanda' : 'domande'} · {WORLDS[world]!.name}
+            </p>
+            <button type="button" className="btn" onClick={onPlay}>
+              Continua la partita
+            </button>
+            {confirmNew ? (
+              <button type="button" className="btn danger" onClick={onNewGame}>
+                Sì, ricomincia da capo
+              </button>
+            ) : (
+              <button type="button" className="btn ghost" onClick={() => setConfirmNew(true)}>
+                Nuova partita
+              </button>
+            )}
+          </>
+        ) : canStart ? (
+          <button type="button" className="btn" onClick={onNewGame}>
             Gioca
           </button>
         ) : (
@@ -74,14 +120,6 @@ export function Home({ bank, onPlay, onSettings }: { bank: Question[]; onPlay: (
       </div>
     </main>
   )
-}
-
-function destination(score: number): string {
-  const reached = stopsReached(score)
-  if (score >= MAX_SCORE) return 'Sei arrivato alla casa di Ale a Varigotti!'
-  if (reached === 0) return 'Sei rimasto vicino al carro.'
-  if (reached === STOPS.length) return 'Ultima tappa superata: la casa di Ale a Varigotti era a un passo.'
-  return `Hai superato la tappa ${reached} di ${STOPS.length}.`
 }
 
 /** From the rarest down, so the surprising answers come first. */
@@ -145,8 +183,18 @@ function ResultCard({ result, number }: { result: Result; number: number }) {
   )
 }
 
-export function Summary({ results, onAgain, onHome }: { results: Result[]; onAgain: () => void; onHome: () => void }) {
-  const score = results.reduce((sum, result) => sum + TIER_INFO[result.outcome].points, 0)
+export function Summary({
+  results,
+  target,
+  onAgain,
+  onHome,
+}: {
+  results: Result[]
+  target: number
+  onAgain: () => void
+  onHome: () => void
+}) {
+  const score = Math.min(target, results.reduce((sum, result) => sum + TIER_INFO[result.outcome].points, 0))
   // Start at the cart, then walk: the scene animates whenever its points change.
   const [walked, setWalked] = useState(0)
   useEffect(() => {
@@ -159,21 +207,25 @@ export function Summary({ results, onAgain, onHome }: { results: Result[]; onAga
       <Scene
         className="hero hero-tall"
         points={walked}
-        msPer100={650}
-        label={`L'omino è arrivato a ${score} punti su ${MAX_SCORE}`}
+        target={target}
+        world={4}
+        msPer100={650 * (500 / target)}
+        label={`L'omino è arrivato alla casa di Ale: ${score} punti su ${target}`}
       />
       <div className="home-body">
         <p className="total">
-          <strong>{score}</strong> / {MAX_SCORE}
+          <strong>{score}</strong> / {target}
         </p>
-        <h1 className="destination">{destination(score)}</h1>
+        <h1 className="destination">
+          Sei arrivato alla casa di Ale a Varigotti in {results.length} {results.length === 1 ? 'domanda' : 'domande'}!
+        </h1>
         <ol className="results">
           {results.map((result, index) => (
-            <ResultCard key={result.question.id} result={result} number={index + 1} />
+            <ResultCard key={`${result.question.id}-${index}`} result={result} number={index + 1} />
           ))}
         </ol>
         <button type="button" className="btn" onClick={onAgain}>
-          Gioca ancora
+          Nuova partita
         </button>
         <button type="button" className="btn ghost" onClick={onHome}>
           Torna all'inizio
@@ -262,7 +314,7 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
             <span className="switch-title">Timer per ogni domanda</span>
             <span className="note">
               {saved.timerOn
-                ? `Hai ${timerLabel(saved.timerSeconds)} per ognuna delle ${QUESTIONS_PER_GAME} domande. Se il tempo finisce, quella domanda conta come «${TIER_INFO.miss.label}».`
+                ? `Hai ${timerLabel(saved.timerSeconds)} per ogni domanda. Se il tempo finisce, quella domanda conta come «${TIER_INFO.miss.label}».`
                 : 'Nessuna fretta: pensa quanto vuoi.'}
             </span>
           </span>
@@ -308,7 +360,7 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
             <span className="note">
               {saved.repeat
                 ? 'Quando le hai giocate tutte, ricapitano a partire da quelle viste da più tempo.'
-                : 'Ogni domanda esce una volta sola. Quando finiscono, azzera i progressi per ricominciare.'}
+                : 'Ogni domanda esce una volta sola. Se finiscono a metà partita ricapitano le più vecchie; poi azzera i progressi per ricominciare.'}
             </span>
           </span>
           <input
@@ -382,19 +434,20 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
           ))}
         </ul>
         <p className="note">
-          Cinque domande a partita, massimo {MAX_SCORE} punti. Lungo il sentiero c'è una tappa ogni {STOPS[0]} punti.
+          Ogni risposta fa avanzare l'omino dei suoi punti, fino alla casa di Ale a {saved.target} punti. C'è una tappa, e un
+          mondo nuovo, ogni {saved.target / 5} punti.
         </p>
       </section>
 
       <section className="panel">
         <h2>Progressi</h2>
-        <p>Azzera partite, record e l'elenco delle domande già giocate. Le domande caricate restano.</p>
+        <p>Azzera partite, record, la partita in corso e l'elenco delle domande già giocate. Le domande caricate restano.</p>
         {confirming === 'reset' ? (
           <button
             type="button"
             className="btn danger"
             onClick={() => {
-              update((current) => ({ ...current, seen: {}, games: [] }))
+              update((current) => ({ ...current, seen: {}, games: [], current: null }))
               setConfirming(null)
             }}
           >

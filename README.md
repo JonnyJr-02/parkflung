@@ -1,22 +1,29 @@
 # ParkFlung
 
-Cinque domande a partita: più la tua risposta è rara, più strada fai lungo il sentiero,
-dal carro di legno fino alla casa di Ale a Varigotti. App per telefono (PWA), in italiano.
+Una domanda dopo l'altra: più la tua risposta è rara, più strada fai lungo il sentiero, dal carro
+di legno fino alla casa di Ale a Varigotti. La partita finisce solo quando ci arrivi. App per telefono
+(PWA), in italiano.
+
+- **Partita fino alla casa:** a 500 o a 1000 punti, si sceglie nella Home. La partita si salva a ogni
+  risposta: si può uscire e continuarla dopo, anche chiudendo l'app.
+- **Cinque mondi:** il meteo cambia ogni quinto di sentiero (100 o 200 punti): temporale con i fulmini,
+  pioggerella, nuvole e sole, sole, tramonto. Si vede nella camminata a schermo intero e nel riepilogo
+  punti dopo ogni risposta.
 
 - **Fasce di rarità:** morto di CACCA ADDOSSO ! (0), bada che storia (10), parata col petto (25),
   Shave like a Bomber! (50), Jonny 🍆 (75), Marco B. (100).
 - **Domande:** circa 1000, di ogni genere, in ordine casuale diverso per ogni telefono. Escono prima
-  quelle mai giocate e mai due della stessa famiglia nella stessa partita (per esempio due «Una città
-  del…»); in Impostazioni si può scegliere se, finite quelle, devono ricapitare.
+  quelle mai giocate, mai una ripetuta nella stessa partita e mai due della stessa famiglia vicine
+  (per esempio due «Una città del…»); in Impostazioni si può scegliere se, finite quelle, devono ricapitare.
 - **Fasce di rarità:** le risposte di ogni domanda, dalla più comune alla più rara, sono divise così:
   circa 20% comuni (solo le più ovvie, al massimo 10), 30% non comuni, 27% rare, 15% esclusive, 8% Marco B.
   Le risposte aggiunte da un secondo file per la stessa domanda finiscono una fascia più in alto.
 - **Timer (facoltativo):** in Impostazioni si accende un timer per ogni domanda, da 30 s, 1, 2 o 5 minuti.
   Sta nell'angolo in alto a destra, passa da verde a giallo, arancione e rosso; se finisce, quella
   domanda vale «morto di CACCA ADDOSSO !».
-- **Fine partita:** un'animazione a schermo intero che cresce con le tappe raggiunte: pioggia al carro,
-  poi coriandoli, palloncini, fuochi d'artificio e, a 500 punti, la festa alla casa di Ale a Varigotti.
-  In sviluppo `?finale=430` la mostra subito con quel punteggio.
+- **Arrivo:** alla casa di Ale parte un'animazione a schermo intero (fuochi d'artificio, coriandoli,
+  palloncini, la casa con le finestre accese), poi il riepilogo con tutte le risposte della partita.
+  In sviluppo `?finale` la mostra subito.
 - **Solo tema chiaro**, anche quando il telefono è in modalità scura.
 - **Nuove domande:** Impostazioni → «Carica domande da file» (JSON o testo, c'è un file di esempio).
 

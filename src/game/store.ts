@@ -1,13 +1,37 @@
 import { useSyncExternalStore } from 'react'
 import type { RawQuestion } from './parse'
 import { DEFAULT_TIMER, isTimerSeconds, type TimerSeconds } from './timer'
-import type { Outcome } from './tiers'
+import { DEFAULT_TARGET, isTarget, type Outcome, type Target } from './tiers'
 
 export interface GameRecord {
   /** When the game ended, in milliseconds since the epoch. */
   at: number
   score: number
   outcomes: Outcome[]
+  /** Points of the house for that game; missing in the old five-question games. */
+  target?: number
+  /** How many questions it took to reach the house. */
+  questions?: number
+}
+
+/** One answered question of the game in progress, small enough to keep in storage. */
+export interface SavedResult {
+  id: string
+  prompt: string
+  typed: string
+  outcome: Outcome
+  /** Label of the matched answer. */
+  answer?: string
+  timedOut?: boolean
+}
+
+/** The game in progress: it goes on until the house, and comes back when the app is reopened. */
+export interface SavedGame {
+  target: Target
+  startedAt: number
+  results: SavedResult[]
+  /** The question on screen, so leaving and coming back does not skip it. */
+  pending?: string
 }
 
 export interface SavedState {
@@ -22,11 +46,23 @@ export interface SavedState {
   timerOn: boolean
   /** Seconds for each question, kept when the timer is switched off. */
   timerSeconds: TimerSeconds
+  /** Points to reach the house in a new game. */
+  target: Target
+  current: SavedGame | null
 }
 
 const KEY = 'parkflung:v1'
 const MAX_GAMES = 1000
-const EMPTY: SavedState = { seen: {}, games: [], custom: [], repeat: true, timerOn: false, timerSeconds: DEFAULT_TIMER }
+const EMPTY: SavedState = {
+  seen: {},
+  games: [],
+  custom: [],
+  repeat: true,
+  timerOn: false,
+  timerSeconds: DEFAULT_TIMER,
+  target: DEFAULT_TARGET,
+  current: null,
+}
 
 function read(): SavedState {
   try {
@@ -40,9 +76,23 @@ function read(): SavedState {
       repeat: data.repeat !== false,
       timerOn: data.timerOn === true,
       timerSeconds: isTimerSeconds(data.timerSeconds) ? data.timerSeconds : DEFAULT_TIMER,
+      target: isTarget(data.target) ? data.target : DEFAULT_TARGET,
+      current: readGame(data.current),
     }
   } catch {
     return EMPTY
+  }
+}
+
+function readGame(value: unknown): SavedGame | null {
+  if (!value || typeof value !== 'object') return null
+  const game = value as Partial<SavedGame>
+  if (!isTarget(game.target) || !Array.isArray(game.results)) return null
+  return {
+    target: game.target,
+    startedAt: typeof game.startedAt === 'number' ? game.startedAt : Date.now(),
+    results: game.results.filter((result) => result && typeof result.id === 'string' && typeof result.outcome === 'string'),
+    pending: typeof game.pending === 'string' ? game.pending : undefined,
   }
 }
 
@@ -87,12 +137,6 @@ export function recordGame(game: GameRecord): void {
   update((current) => ({ ...current, games: [...current.games, game].slice(-MAX_GAMES) }))
 }
 
-export function summarize(games: readonly GameRecord[]): { played: number; best: number; average: number } {
-  if (games.length === 0) return { played: 0, best: 0, average: 0 }
-  const total = games.reduce((sum, game) => sum + game.score, 0)
-  return {
-    played: games.length,
-    best: Math.max(...games.map((game) => game.score)),
-    average: Math.round(total / games.length),
-  }
+export function saveGame(game: SavedGame | null): void {
+  update((current) => ({ ...current, current: game }))
 }

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { MAX_SCORE, STOPS } from '../game/tiers'
+import { DEFAULT_TARGET, stopsFor } from '../game/tiers'
+import { BOLT_PATH, CLOUD_PATH } from './Weather'
 
 /*
  * The trail as a vintage riviera poster. Drawing units: 375 × 560. The poster art sits 60 units
@@ -10,6 +11,15 @@ const H = 560
 const OFFSET = 60
 const TRAIL =
   'M70 392 C 160 402, 320 396, 312 356 C 305 322, 120 334, 92 300 C 70 272, 250 280, 274 250 C 292 226, 170 232, 190 210 C 204 194, 260 196, 296 180'
+
+/** Clouds of each world in drawing units: x, y of the bottom-left corner, scale. */
+const SKY_CLOUDS: ReadonlyArray<ReadonlyArray<[number, number, number]>> = [
+  [[-10, 70, 1.9], [70, 46, 2.3], [180, 80, 2.1], [270, 52, 2.4], [20, 140, 1.8], [130, 128, 2.2], [240, 150, 2], [310, 116, 1.7], [190, 190, 1.9]],
+  [[0, 80, 1.7], [120, 58, 2], [250, 88, 1.8], [60, 158, 1.6], [200, 170, 1.9], [300, 146, 1.5]],
+  [[20, 96, 1.4], [176, 214, 1.7], [286, 118, 1.3], [100, 56, 1.1]],
+  [[36, 86, 0.9], [262, 64, 0.8]],
+  [[20, 176, 1.5], [116, 200, 1.1], [300, 160, 1.2]],
+]
 
 /** How close the camera gets while the walker moves: width of the visible area in drawing units. */
 const CLOSE_WIDTH = 150
@@ -93,6 +103,10 @@ function prefersReducedMotion(): boolean {
 export interface SceneProps {
   /** Points scored so far: the walker walks there whenever this changes. */
   points: number
+  /** Points of the house: the whole trail. */
+  target?: number
+  /** The weather: 0 storm, 1 drizzle, 2 clouds and sun, 3 sun, 4 sunset. */
+  world?: number
   /** Milliseconds to walk 100 points. */
   msPer100?: number
   /** Follow the walker with a close camera while he walks, then pull back to the whole trail. */
@@ -103,7 +117,20 @@ export interface SceneProps {
   children?: ReactNode
 }
 
-export function Scene({ points, msPer100 = 900, camera = false, label, className, onArrive, children }: SceneProps) {
+export function Scene({
+  points,
+  target = DEFAULT_TARGET,
+  world = 4,
+  msPer100 = 900,
+  camera = false,
+  label,
+  className,
+  onArrive,
+  children,
+}: SceneProps) {
+  const stopPoints = stopsFor(target)
+  const targetRef = useRef(target)
+  targetRef.current = target
   const boxRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const pathRef = useRef<SVGPathElement>(null)
@@ -121,12 +148,13 @@ export function Scene({ points, msPer100 = 900, camera = false, label, className
     const walker = walkerRef.current
     if (!path || !walker) return
     const total = path.getTotalLength()
-    const at = total * Math.min(1, Math.max(0, score / MAX_SCORE))
+    const share = Math.min(1, Math.max(0, score / targetRef.current))
+    const at = total * share
     const p = path.getPointAtLength(at)
     const ahead = path.getPointAtLength(Math.min(total, at + 3))
     if (Math.abs(ahead.x - p.x) > 0.05) facingRef.current = ahead.x < p.x ? -1 : 1
     // Further up the poster is further away: the walker gets a little smaller.
-    const size = 1.15 - 0.4 * (score / MAX_SCORE)
+    const size = 1.15 - 0.4 * share
     walker.setAttribute('transform', `translate(${p.x.toFixed(2)} ${(p.y - bob).toFixed(2)}) scale(${(facingRef.current * size).toFixed(3)} ${size.toFixed(3)})`)
     posRef.current = [p.x, p.y + OFFSET]
   }
@@ -135,8 +163,8 @@ export function Scene({ points, msPer100 = 900, camera = false, label, className
     const path = pathRef.current
     if (!path) return
     const total = path.getTotalLength()
-    setStops(STOPS.map((stop) => {
-      const p = path.getPointAtLength((total * stop) / MAX_SCORE)
+    setStops([1, 2, 3, 4].map((k) => {
+      const p = path.getPointAtLength((total * k) / 5)
       return [p.x, p.y]
     }))
     place(shownRef.current, 0)
@@ -219,7 +247,7 @@ export function Scene({ points, msPer100 = 900, camera = false, label, className
   }, [camera])
 
   return (
-    <div ref={boxRef} className={`scene ${className ?? ''}`}>
+    <div ref={boxRef} className={`scene world-${world} ${className ?? ''}`}>
       <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} preserveAspectRatio="xMidYMid slice">
         <defs>
           <linearGradient id="p-sky" x1="0" y1="0" x2="0" y2="1">
@@ -240,9 +268,21 @@ export function Scene({ points, msPer100 = 900, camera = false, label, className
             <circle key={`${x}-${y}`} cx={x} cy={y} r={1.4} />
           ))}
         </g>
-        <g clipPath="url(#p-sunclip)">
+        <g className="p-sun-group" clipPath="url(#p-sunclip)">
           <circle className="p-sun" cx={232} cy={158 + OFFSET} r={78} />
         </g>
+        <g className="p-clouds" key={world}>
+          {SKY_CLOUDS[world]!.map(([x, y, scale], n) => (
+            <g key={n} transform={`translate(${x} ${y + OFFSET - 32 * scale}) scale(${scale})`}>
+              <path className="p-cloud" d={CLOUD_PATH} style={{ animationDelay: `-${n * 3}s` }} />
+            </g>
+          ))}
+        </g>
+        {world === 0 && (
+          <g className="p-bolt" transform={`translate(150 ${40 + OFFSET}) scale(2.2)`}>
+            <path d={BOLT_PATH} />
+          </g>
+        )}
         <g transform={`translate(0 ${OFFSET})`}>
           <path className="p-birds" d="M70 70 q6 -6 12 0 q6 -6 12 0 M104 92 q5 -5 10 0 q5 -5 10 0" />
           <rect className="p-sea" y={166} width={W} height={92} />
@@ -292,11 +332,11 @@ export function Scene({ points, msPer100 = 900, camera = false, label, className
             <path className="p-spoke" d="M17 394 h22 M28 383 v22 M45 394 h22 M56 383 v22" />
           </g>
           {stops.map(([x, y], n) => (
-            <g key={n} transform={`translate(${x} ${y - 22})`} className={points >= STOPS[n]! ? 'p-stop reached' : 'p-stop'}>
+            <g key={n} transform={`translate(${x} ${y - 22})`} className={points >= stopPoints[n]! ? 'p-stop reached' : 'p-stop'}>
               <path className="p-stop-pole" d="M0 10 V22" />
-              <circle className="p-stop-disc" r={11} />
-              <text className="p-stop-text" y={4}>
-                {STOPS[n]}
+              <circle className="p-stop-disc" r={stopPoints[n]! >= 1000 ? 13 : 11} />
+              <text className={stopPoints[n]! >= 1000 ? 'p-stop-text small' : 'p-stop-text'} y={4}>
+                {stopPoints[n]}
               </text>
             </g>
           ))}
@@ -305,6 +345,12 @@ export function Scene({ points, msPer100 = 900, camera = false, label, className
           </g>
         </g>
       </svg>
+      {world <= 1 && (
+        <div className="scene-weather" aria-hidden="true">
+          <span className={world === 0 ? 'wx-rain heavy' : 'wx-rain light'} />
+          {world === 0 && <span className="wx-flash" />}
+        </div>
+      )}
       {children}
     </div>
   )
