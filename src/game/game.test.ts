@@ -195,17 +195,23 @@ describe('suspense', () => {
 })
 
 describe('gaussian tiers', () => {
-  it('puts the most answers in comune and fewer in each rarer tier, at least one each', async () => {
+  it('keeps comune small and makes non comune and raro the widest tiers, at least one each', async () => {
     const { gaussianSizes } = await import('./bank')
-    expect(gaussianSizes(100)).toEqual([38, 30, 18, 9, 5])
-    expect(gaussianSizes(8)).toEqual([3, 2, 1, 1, 1])
+    expect(gaussianSizes(40)).toEqual([8, 12, 11, 6, 3])
+    expect(gaussianSizes(100)).toEqual([10, 35, 32, 15, 8])
+    expect(gaussianSizes(8)).toEqual([2, 2, 2, 1, 1])
     for (let n = 5; n <= 400; n++) {
-      const sizes = gaussianSizes(n)
-      expect(sizes.reduce((a, b) => a + b, 0)).toBe(n)
-      expect(Math.min(...sizes)).toBeGreaterThanOrEqual(1)
-      for (let tier = 1; tier < 5; tier++) expect(sizes[tier]).toBeLessThanOrEqual(sizes[tier - 1]!)
+      const [c, nc, r, e, t] = gaussianSizes(n) as [number, number, number, number, number]
+      expect(c + nc + r + e + t).toBe(n)
+      expect(Math.min(c, nc, r, e, t)).toBeGreaterThanOrEqual(1)
+      expect(c).toBeLessThanOrEqual(10)
+      if (n >= 20) {
+        expect(nc).toBeGreaterThanOrEqual(c)
+        expect(r).toBeGreaterThanOrEqual(c)
+        expect(r).toBeGreaterThanOrEqual(e)
+        expect(e).toBeGreaterThanOrEqual(t)
+      }
     }
-    expect(gaussianSizes(60)[0]).toBeGreaterThan(gaussianSizes(60)[4]! * 5)
   })
 
   it('keeps the order of the answers', async () => {
@@ -213,8 +219,8 @@ describe('gaussian tiers', () => {
     const answers = Array.from({ length: 20 }, (_, i) => `a${i}`)
     const cut = gaussianTiers({ q: 'x', c: answers.slice(0, 2), n: answers.slice(2, 5), r: answers.slice(5, 9), e: answers.slice(9, 14), t: answers.slice(14) })
     expect([...cut.c, ...cut.n, ...cut.r, ...cut.e, ...cut.t]).toEqual(answers)
-    expect(cut.c).toEqual(answers.slice(0, 7))
-    expect(cut.t).toEqual(['a19'])
+    expect(cut.c).toEqual(answers.slice(0, 4))
+    expect(cut.t).toEqual(['a18', 'a19'])
   })
 })
 

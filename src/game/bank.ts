@@ -5,10 +5,14 @@ import { TIERS, type Tier } from './tiers'
 const packs = import.meta.glob<string>('../data/*.txt', { query: '?raw', import: 'default', eager: true })
 
 /**
- * Share of a question's answers in each tier, commonest first: the right half of a normal curve
- * cut into bins half a σ wide, so "comune" is the biggest tier and each rarer one is smaller.
+ * Share of a question's answers in each tier, commonest first. "Comune" keeps only the answers
+ * almost everyone gives; "non comune" and "raro" are the widest, so an answer that is just a bit
+ * less obvious already climbs; then fewer "esclusivo" and the fewest "Marco B.".
  */
-export const GAUSSIAN_SHARE = [0.383, 0.3, 0.184, 0.088, 0.045] as const
+export const GAUSSIAN_SHARE = [0.2, 0.3, 0.27, 0.15, 0.08] as const
+
+/** "Comune" never holds more than this many answers, however long the list: the rest climb. */
+export const MAX_COMMON = 10
 
 /** How many answers go in each tier for a question with `n` answers: at least one each, largest remainders first. */
 export function gaussianSizes(n: number): number[] {
@@ -23,11 +27,18 @@ export function gaussianSizes(n: number): number[] {
     sizes[sizes.indexOf(Math.max(...sizes))]! -= 1
     total--
   }
-  return sizes.sort((a, b) => b - a)
+  // Long lists: only the ten most obvious answers are "comune", the others go to non comune and raro.
+  const extra = sizes[0]! - MAX_COMMON
+  if (extra > 0) {
+    sizes[0] = MAX_COMMON
+    sizes[1]! += Math.ceil(extra / 2)
+    sizes[2]! += Math.floor(extra / 2)
+  }
+  return sizes
 }
 
 /**
- * Re-cuts a question's tiers along the half bell curve. The answers keep their order, from the one
+ * Re-cuts a question's tiers by GAUSSIAN_SHARE. The answers keep their order, from the one
  * most people would say to the rarest, so the rarity of each answer decides its tier.
  */
 export function gaussianTiers(raw: RawQuestion): RawQuestion {
@@ -55,7 +66,9 @@ export const builtIn: { questions: RawQuestion[]; problems: string[] } = (() => 
     for (const raw of parsed.questions) {
       const id = questionId(raw.q)
       const known = byId.get(id)
-      if (known) TIERS.forEach((tier) => known[tier].push(...raw[tier]))
+      // Extra answers for a question already written go one tier rarer than their own label: the
+      // first list was ranked with care, the additions are mostly variants and less obvious answers.
+      if (known) TIERS.forEach((tier, index) => known[TIERS[Math.min(index + 1, TIERS.length - 1)]!].push(...raw[tier]))
       else byId.set(id, { q: raw.q, c: [...raw.c], n: [...raw.n], r: [...raw.r], e: [...raw.e], t: [...raw.t] })
     }
     problems.push(...parsed.problems.map((problem) => `${file}: ${problem}`))
