@@ -148,7 +148,9 @@ function ResultCard({ result, number, hardcore }: { result: Result; number: numb
           </span>
         </span>
         <span className="result-tier">
-          <span className="chip">{result.timedOut && !hardcore ? 'Tempo scaduto' : TIER_INFO[result.outcome].label}</span>
+          <span className="chip">
+            {!hardcore && result.outcome === 'miss' ? (result.timedOut ? 'Tempo scaduto' : 'Passata') : TIER_INFO[result.outcome].label}
+          </span>
           <span className="result-points">+{TIER_INFO[result.outcome].points}</span>
         </span>
       </div>
@@ -331,7 +333,7 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
             <span className="note">
               {saved.hardcore
                 ? `Attiva: c'è anche «${TIER_INFO.miss.label}» (0 punti), si può passare la domanda e una risposta che non è tra quelle valide vale 0 punti. Partita a 500 punti in ${maxQuestions(500, true)} domande, a 1000 punti in ${maxQuestions(1000, true)}.`
-                : `Spenta: non c'è «${TIER_INFO.miss.label}». Se scrivi una risposta che non è tra quelle valide te lo dico e riprovi finché ne trovi una giusta; non si può passare. Per questo le domande sono il 25% in meno: ${maxQuestions(500, false)} invece di ${maxQuestions(500, true)} a 500 punti, ${maxQuestions(1000, false)} invece di ${maxQuestions(1000, true)} a 1000 punti.`}
+                : `Spenta: non c'è «${TIER_INFO.miss.label}». Se scrivi una risposta che non è tra quelle valide te lo dico e riprovi finché ne trovi una giusta. Se passi, o se finisce il tempo, quella domanda vale 0 punti. Per questo le domande sono il 25% in meno: ${maxQuestions(500, false)} invece di ${maxQuestions(500, true)} a 500 punti, ${maxQuestions(1000, false)} invece di ${maxQuestions(1000, true)} a 1000 punti.`}
               {saved.current ? ' Vale dalla prossima partita.' : ''}
             </span>
           </span>

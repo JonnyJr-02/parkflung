@@ -170,7 +170,26 @@ export function Game({
     inputRef.current?.blur()
     const result: Result = { question, typed: '', outcome: 'miss', timedOut: true, retried: secondTry || undefined }
     if (hardcore) setPhase({ kind: 'suspense', result })
-    else commit(secondTry && firstTry ? { ...firstTry, retried: true } : result)
+    else zeroPoints(result)
+  }
+
+  /** «Non mi viene niente, passo»: a miss in hardcore, 0 points without it. */
+  function pass() {
+    if (hardcore) {
+      startSuspense('miss')
+      return
+    }
+    markSeen([question.id])
+    inputRef.current?.blur()
+    zeroPoints({ question, typed: '', outcome: 'miss', retried: secondTry || undefined })
+  }
+
+  /**
+   * Without hardcore, a pass or the end of the time is worth 0 points, straight to the recap. On the
+   * second try with the card, the first answer stays instead.
+   */
+  function zeroPoints(result: Result) {
+    commit(secondTry && firstTry ? { ...firstTry, retried: true } : result)
   }
 
   /** The meter has stopped: Marco B. gets its party, the lowest rarity can be answered again with the card. */
@@ -307,11 +326,9 @@ export function Game({
                   «{notFound}» non c'è tra le risposte: riprova!
                 </p>
               )}
-              {hardcore && (
-                <button type="button" className="link pass" onClick={() => startSuspense('miss')} disabled={phase.kind === 'confirm'}>
-                  Non mi viene niente, passo
-                </button>
-              )}
+              <button type="button" className="link pass" onClick={pass} disabled={phase.kind === 'confirm'}>
+                Non mi viene niente, passo
+              </button>
             </form>
           </div>
         )}
@@ -330,13 +347,15 @@ export function Game({
           <section className={`reveal tier-${last.outcome}`} aria-live="polite">
             <WeatherStrip world={world} arrived={arrived} />
             <p className="reveal-prompt">{last.question.prompt}</p>
-            <p className="reveal-label">{last.timedOut && !hardcore ? 'Tempo scaduto' : TIER_INFO[last.outcome].label}</p>
+            <p className="reveal-label">
+              {!hardcore && last.outcome === 'miss' ? (last.timedOut ? 'Tempo scaduto' : 'Hai passato') : TIER_INFO[last.outcome].label}
+            </p>
             <p className="reveal-answer">
-              {last.timedOut
-                ? hardcore
+              {!hardcore && last.outcome === 'miss'
+                ? 'Questa domanda vale 0 punti'
+                : last.timedOut
                   ? 'Tempo scaduto!'
-                  : 'Questa domanda vale 0 punti'
-                : last.answer
+                  : last.answer
                   ? last.answer.label
                   : last.typed
                     ? `«${last.typed}» non è tra le risposte`

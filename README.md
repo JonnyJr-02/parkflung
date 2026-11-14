@@ -7,8 +7,8 @@ di legno fino alla casa di Ale a Varigotti. La partita finisce solo quando ci ar
 - **Partita fino alla casa:** a 500 o a 1000 punti, si sceglie nella Home. La partita si salva a ogni
   risposta: si può uscire e continuarla dopo, anche chiudendo l'app.
 - **Modalità hardcore (spenta di default):** in Impostazioni, sopra il timer. Senza hardcore non esiste
-  «morto di CACCA ADDOSSO !»: una risposta che non è tra quelle valide fa riprovare, non si può passare,
-  il termometro parte da «bada che storia», a tempo scaduto la domanda vale 0 punti e la Carta Rivincita
+  «morto di CACCA ADDOSSO !»: una risposta che non è tra quelle valide fa riprovare, se si passa o finisce
+  il tempo la domanda vale 0 punti, il termometro parte da «bada che storia» e la Carta Rivincita
   fa riprovare dopo «bada che storia». Per questo le domande sono il 25% in meno (15 a 500 punti, 30 a
   1000). Con hardcore il gioco è quello di sempre. La modalità si fissa all'inizio di ogni partita.
 - **Domande contate:** in hardcore al massimo 20 domande a 500 punti, 40 a 1000. Se finiscono prima della casa,
