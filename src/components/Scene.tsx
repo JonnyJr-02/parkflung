@@ -21,8 +21,6 @@ const SKY_CLOUDS: ReadonlyArray<ReadonlyArray<[number, number, number]>> = [
   [[20, 176, 1.5], [116, 200, 1.1], [300, 160, 1.2]],
 ]
 
-/** How close the camera gets while the walker moves: width of the visible area in drawing units. */
-const CLOSE_WIDTH = 150
 
 function Palm({ x, y, s, flip = false }: { x: number; y: number; s: number; flip?: boolean }) {
   return (
@@ -109,8 +107,6 @@ export interface SceneProps {
   world?: number
   /** Milliseconds to walk 100 points. */
   msPer100?: number
-  /** Follow the walker with a close camera while he walks, then pull back to the whole trail. */
-  camera?: boolean
   label: string
   className?: string
   onArrive?: () => void
@@ -122,7 +118,6 @@ export function Scene({
   target = DEFAULT_TARGET,
   world = 4,
   msPer100 = 900,
-  camera = false,
   label,
   className,
   onArrive,
@@ -131,14 +126,10 @@ export function Scene({
   const stopPoints = stopsFor(target)
   const targetRef = useRef(target)
   targetRef.current = target
-  const boxRef = useRef<HTMLDivElement>(null)
-  const svgRef = useRef<SVGSVGElement>(null)
   const pathRef = useRef<SVGPathElement>(null)
   const walkerRef = useRef<SVGGElement>(null)
   const shownRef = useRef(points)
   const facingRef = useRef(1)
-  const posRef = useRef<[number, number]>([70, 392 + OFFSET])
-  const zoomTargetRef = useRef(0)
   const arriveRef = useRef(onArrive)
   arriveRef.current = onArrive
   const [stops, setStops] = useState<Array<[number, number]>>([])
@@ -156,7 +147,9 @@ export function Scene({
     // Further up the poster is further away: the walker gets a little smaller.
     const size = 1.15 - 0.4 * share
     walker.setAttribute('transform', `translate(${p.x.toFixed(2)} ${(p.y - bob).toFixed(2)}) scale(${(facingRef.current * size).toFixed(3)} ${size.toFixed(3)})`)
-    posRef.current = [p.x, p.y + OFFSET]
+    // The part of the trail already walked gets its own colour.
+    path.style.strokeDasharray = `${total} ${total + 20}`
+    path.style.strokeDashoffset = `${(total - at).toFixed(2)}`
   }
 
   useLayoutEffect(() => {
@@ -186,7 +179,6 @@ export function Scene({
     const start = performance.now()
     let frame = 0
     walkerRef.current?.classList.add('walking')
-    zoomTargetRef.current = 1
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / duration)
       // A soft bob, highest mid-step: sin² has no corners, so the walker does not hop.
@@ -194,61 +186,16 @@ export function Scene({
       if (t < 1) frame = requestAnimationFrame(tick)
       else {
         walkerRef.current?.classList.remove('walking')
-        zoomTargetRef.current = 0
         arriveRef.current?.()
       }
     }
-    // Let the camera close in before the first step.
-    const delay = camera ? 900 : 0
-    const timer = window.setTimeout(() => (frame = requestAnimationFrame(tick)), delay)
-    return () => {
-      clearTimeout(timer)
-      cancelAnimationFrame(frame)
-    }
-  }, [points, msPer100, camera])
-
-  // Camera: eases between the whole trail and a close view centred on the walker.
-  useEffect(() => {
-    if (!camera) return
-    let frame = 0
-    let zoom = 0
-    let cx = posRef.current[0]
-    let cy = posRef.current[1]
-    let last = performance.now()
-    const reduce = prefersReducedMotion()
-    const step = (now: number) => {
-      // Smoothing by elapsed time, so the camera glides the same on 60 Hz and 120 Hz screens.
-      const dt = Math.min(64, now - last)
-      last = now
-      const zoomRate = reduce ? 1 : 1 - Math.exp(-dt / 260)
-      const followRate = reduce ? 1 : 1 - Math.exp(-dt / 110)
-      const box = boxRef.current, svg = svgRef.current
-      if (box && svg && box.clientWidth > 0) {
-        const aspect = box.clientHeight / box.clientWidth
-        let wideW = W, wideH = W * aspect
-        if (wideH > H) {
-          wideH = H
-          wideW = H / aspect
-        }
-        zoom += (zoomTargetRef.current - zoom) * zoomRate
-        const w = wideW + (Math.min(CLOSE_WIDTH, wideW) - wideW) * zoom
-        const h = w * aspect
-        const [wx, wy] = posRef.current
-        cx += (wx - cx) * followRate
-        cy += (wy - 40 - cy) * followRate
-        const x = Math.min(W - w, Math.max(0, cx - w / 2))
-        const y = Math.min(H - h, Math.max(0, cy - h / 2))
-        svg.setAttribute('viewBox', `${x.toFixed(2)} ${y.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`)
-      }
-      frame = requestAnimationFrame(step)
-    }
-    frame = requestAnimationFrame(step)
+    frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [camera])
+  }, [points, msPer100])
 
   return (
-    <div ref={boxRef} className={`scene world-${world} ${className ?? ''}`}>
-      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} preserveAspectRatio="xMidYMid slice">
+    <div className={`scene world-${world} ${className ?? ''}`}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} preserveAspectRatio="xMidYMid slice">
         <defs>
           <linearGradient id="p-sky" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" className="p-sky-1" />
@@ -309,7 +256,7 @@ export function Scene({
           <path className="p-hill-3" d="M0 362 C 100 340, 230 376, 375 352 L375 500 L0 500 Z" />
           <path className="p-hill-4" d="M0 446 C 120 430, 250 458, 375 438 L375 500 L0 500 Z" />
           <path className="p-trail-edge" d={TRAIL} />
-          <path ref={pathRef} className="p-trail" d={TRAIL} />
+          <path className="p-trail" d={TRAIL} />
           <path className="p-trail-dash" d={TRAIL} />
           <Palm x={40} y={270} s={0.85} />
           <Palm x={348} y={318} s={1.05} flip />
@@ -331,6 +278,15 @@ export function Scene({
             <circle className="p-wheel" cx="56" cy="394" r="11" />
             <path className="p-spoke" d="M17 394 h22 M28 383 v22 M45 394 h22 M56 383 v22" />
           </g>
+        </g>
+      </svg>
+      {/*
+        The moving parts on a layer of their own: each frame only the walked trail and the walker are
+        drawn again, never the whole poster, so the walk stays smooth on a phone.
+      */}
+      <svg className="scene-track" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <g transform={`translate(0 ${OFFSET})`}>
+          <path ref={pathRef} className="p-trail-done" d={TRAIL} />
           {stops.map(([x, y], n) => (
             <g key={n} transform={`translate(${x} ${y - 22})`} className={points >= stopPoints[n]! ? 'p-stop reached' : 'p-stop'}>
               <path className="p-stop-pole" d="M0 10 V22" />

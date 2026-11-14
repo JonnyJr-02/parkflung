@@ -184,6 +184,20 @@ describe('suspense', () => {
     expect(times[0]).toBeGreaterThan(5000)
     expect(times[5]).toBeGreaterThan(9000)
   })
+
+  it('goes up as often as it falls back, a miss included', async () => {
+    const { pushesOn } = await import('../components/RarityMeter')
+    for (const outcome of ['miss', 'c', 'n', 'r', 'e'] as const) {
+      expect(pushesOn(outcome, () => 0.2)).toBe(true)
+      expect(pushesOn(outcome, () => 0.7)).toBe(false)
+    }
+    expect(pushesOn('t', () => 0.99)).toBe(true)
+    let seed = 7
+    const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
+    const ups = Array.from({ length: 2000 }, () => pushesOn('miss', random)).filter(Boolean).length
+    expect(ups / 2000).toBeGreaterThan(0.45)
+    expect(ups / 2000).toBeLessThan(0.55)
+  })
 })
 
 describe('gaussian tiers', () => {
@@ -255,5 +269,11 @@ describe('a game until the house', () => {
   it('ends with the arrival at the house of Ale', async () => {
     const { ARRIVAL_TITLE } = await import('../components/Finale')
     expect(ARRIVAL_TITLE).toContain('casa di Ale a Varigotti')
+  })
+
+  it('has its own show for each world left behind before the house', async () => {
+    const { WORLD_DONE } = await import('../components/WorldDone')
+    expect(WORLD_DONE).toHaveLength(WORLDS.length - 1)
+    expect(new Set(WORLD_DONE.map((done) => done.title)).size).toBe(WORLD_DONE.length)
   })
 })

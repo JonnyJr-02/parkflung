@@ -3,9 +3,9 @@ import { stopsFor, TIER_INFO, worldOf, WORLDS, type Outcome } from '../game/tier
 import { Scene } from './Scene'
 
 /**
- * Full-screen walk after each scoring answer: the whole trail, the camera closes in on the walker,
- * follows him to his new place, then pulls back. When he walks into a new world the weather
- * changes once he gets there. Tap anywhere to skip ahead.
+ * Full-screen walk after each scoring answer: the whole trail in view, the walker strides to his
+ * new place and the walked part of the trail fills with colour. When he walks into a new world
+ * the weather changes once he gets there. Tap anywhere to skip ahead.
  */
 export function WalkOverlay({
   from,
@@ -64,7 +64,6 @@ export function WalkOverlay({
         points={points}
         target={target}
         world={arrived ? worldTo : worldFrom}
-        camera
         msPer100={3000 * (500 / target)}
         label={`Il sentiero: ${shownTo} punti su ${target}`}
         onArrive={() => setArrived(true)}

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Finale } from './components/Finale'
 import { Game, scoreOf, type Result } from './components/Game'
 import { Home, Settings, Summary } from './components/Screens'
+import { WorldDone } from './components/WorldDone'
 import { mergeBank, pickNext } from './game/bank'
 import type { Question } from './game/parse'
 import { getState, recordGame, saveGame, useSavedState, type SavedGame, type SavedResult } from './game/store'
@@ -14,6 +15,8 @@ type View =
   /** The arrival at the house of Ale, then the summary. */
   | { name: 'finale'; results: Result[]; target: Target }
   | { name: 'summary'; results: Result[]; target: Target }
+  /** Development only: one world-completed show on its own. */
+  | { name: 'world'; world: number }
 
 function toSaved(result: Result): SavedResult {
   return {
@@ -26,9 +29,16 @@ function toSaved(result: Result): SavedResult {
   }
 }
 
-/** In development, `?finale` opens the arrival with a made-up game, to try it quickly. */
+/**
+ * In development, `?finale` opens the arrival with a made-up game and `?mondo=0` to `?mondo=3` the
+ * show of that world completed, to try them quickly.
+ */
 function firstView(): View {
-  if (!import.meta.env.DEV || !new URLSearchParams(location.search).has('finale')) return { name: 'home' }
+  if (!import.meta.env.DEV) return { name: 'home' }
+  const params = new URLSearchParams(location.search)
+  const world = Number(params.get('mondo'))
+  if (params.has('mondo') && world >= 0 && world <= 3) return { name: 'world', world }
+  if (!params.has('finale')) return { name: 'home' }
   const results: Result[] = Array.from({ length: 7 }, (_, i) => ({
     question: { id: `prova-${i}`, prompt: `Domanda di prova ${i + 1}`, answers: [] },
     typed: '',
@@ -127,6 +137,8 @@ export function App() {
           onDone={() => setView({ name: 'summary', results: view.results, target: view.target })}
         />
       )
+    case 'world':
+      return <WorldDone world={view.world} target={DEFAULT_TARGET} onDone={() => setView({ name: 'home' })} />
     case 'summary':
       return <Summary results={view.results} target={view.target} onAgain={newGame} onHome={() => setView({ name: 'home' })} />
   }

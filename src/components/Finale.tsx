@@ -21,12 +21,12 @@ function pick<T>(items: readonly T[]): T {
   return items[Math.floor(Math.random() * items.length)]!
 }
 
-function prefersReducedMotion(): boolean {
+export function prefersReducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
 /** Rain, confetti, balloons and fireworks on one canvas. Returns a function that stops it. */
-function startShow(canvas: HTMLCanvasElement, level: number): () => void {
+export function startShow(canvas: HTMLCanvasElement, level: number): () => void {
   const ctx = canvas.getContext('2d')
   if (!ctx) return () => {}
   const show = SHOW[level]!

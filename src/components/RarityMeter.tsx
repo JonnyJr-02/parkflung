@@ -9,12 +9,23 @@ const INTRO_MS = 520
 const CLIMB_MS: Record<Outcome, number> = { miss: 3200, c: 3800, n: 4600, r: 5400, e: 6400, t: 7600 }
 /** How far the bar creeps past the answer's rung before falling back: it teases the next one. */
 const TEASE: Record<Outcome, number> = { miss: 0.85, c: 0.35, n: 0.4, r: 0.45, e: 0.5, t: 0.4 }
+/** Where the bar creeps to, in the bulb under the ladder, before pushing on to a miss. */
+const BELOW_MISS = 0.3
 const SETTLE_MS = 450
 const HOLD_MS = 1100
 
 /** Time from the start to `onDone` when the bar falls back onto the answer (the other ending is a step shorter). */
 export function revealMs(outcome: Outcome): number {
   return INTRO_MS + CLIMB_MS[outcome] + SETTLE_MS + HOLD_MS
+}
+
+/**
+ * How the reveal ends: true when the bar waits a rung below and then pushes on up to the answer,
+ * false when it creeps towards the rung above and falls back onto the answer. Half and half for
+ * every rarity, a miss included; Marco B. has nothing above, so it always goes up.
+ */
+export function pushesOn(outcome: Outcome, random: () => number = Math.random): boolean {
+  return outcome === 't' || random() < 0.5
 }
 
 function prefersReducedMotion(): boolean {
@@ -66,17 +77,16 @@ export function RarityMeter({ outcome, typed, onDone }: { outcome: Outcome; type
     }
     // Two endings that look the same until the very last moment: the bar pauses on a rung and the
     // one above flickers. Either it falls back (the answer is the paused rung) or it pushes on and
-    // the flickering rung lights up (the answer is that one). Chosen at random when both fit.
-    const canFallBack = target + 1 < OUTCOMES.length
-    const canPushOn = target >= 1
-    const pushOn = canPushOn && (!canFallBack || Math.random() < 0.5)
-    const apparent = pushOn ? OUTCOMES[target - 1]! : outcome
+    // the flickering rung lights up (the answer is that one). Half and half: for a miss going up,
+    // the bar waits low in the bulb while the miss flickers, then rises onto it.
+    const pushOn = pushesOn(outcome)
+    const apparent: Outcome | undefined = pushOn ? OUTCOMES[target - 1] : outcome
     const goal = target + 0.5
     const pause = pushOn ? goal - 1 : goal
-    const far = pause + TEASE[apparent]
+    const far = apparent ? pause + TEASE[apparent] : BELOW_MISS
     const teaseRung = pushOn ? target : target + 1
     // The climb is timed for the rung where the bar pauses, so its speed gives nothing away.
-    const climb = CLIMB_MS[apparent]
+    const climb = CLIMB_MS[apparent ?? 'miss']
     let shown = 0
     timers.push(
       window.setTimeout(() => {
@@ -101,7 +111,7 @@ export function RarityMeter({ outcome, typed, onDone }: { outcome: Outcome; type
             buzz(8)
           }
           // The rung above the pause flickers while the bar creeps towards it.
-          setTease(elapsed < climb && level > pause + 0.15 && teaseRung < OUTCOMES.length ? teaseRung : -1)
+          setTease(elapsed < climb && level > Math.max(0.1, pause + 0.15) && teaseRung < OUTCOMES.length ? teaseRung : -1)
           if (elapsed < climb + SETTLE_MS) frame = requestAnimationFrame(run)
           else finish()
         }

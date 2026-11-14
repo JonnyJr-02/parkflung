@@ -7,6 +7,7 @@ import { Farflung } from './Farflung'
 import { RarityMeter } from './RarityMeter'
 import { Timer } from './Timer'
 import { WeatherStrip } from './Weather'
+import { WorldDone } from './WorldDone'
 import { WalkOverlay } from './WalkOverlay'
 
 export interface Result {
@@ -29,6 +30,8 @@ type Phase =
   | { kind: 'celebrate'; result: Result }
   /** Full-screen walk to the new score. */
   | { kind: 'walk'; from: number; outcome: Outcome }
+  /** Full-screen celebration: the walker has just left a world for the next one. */
+  | { kind: 'world'; world: number }
   | { kind: 'reveal' }
 
 /** A thin trail along the top: where the walker is, and the four stops. */
@@ -98,7 +101,7 @@ export function Game({
   const score = scoreOf(results)
   const last = results[results.length - 1]
   const arrived = score >= target
-  const committed = phase.kind === 'reveal' || phase.kind === 'walk'
+  const committed = phase.kind === 'reveal' || phase.kind === 'walk' || phase.kind === 'world'
   const number = committed ? results.length : results.length + 1
   const world = worldOf(score, target)
 
@@ -260,8 +263,20 @@ export function Game({
       {phase.kind === 'celebrate' && <Farflung answer={phase.result.answer?.label ?? ''} onDone={() => commit(phase.result)} />}
 
       {phase.kind === 'walk' && (
-        <WalkOverlay from={phase.from} to={score} target={target} outcome={phase.outcome} onDone={() => setPhase({ kind: 'reveal' })} />
+        <WalkOverlay
+          from={phase.from}
+          to={score}
+          target={target}
+          outcome={phase.outcome}
+          onDone={() => {
+            // A world completed on the way gets its own show; the last one is the house, after the recap.
+            const left = worldOf(phase.from, target)
+            setPhase(score < target && worldOf(score, target) > left ? { kind: 'world', world: left } : { kind: 'reveal' })
+          }}
+        />
       )}
+
+      {phase.kind === 'world' && <WorldDone world={phase.world} target={target} onDone={() => setPhase({ kind: 'reveal' })} />}
     </main>
   )
 }

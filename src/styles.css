@@ -2427,3 +2427,333 @@ button {
     animation: none;
   }
 }
+
+/* ---------- The trail: the walked part in its own colour, on a layer of its own ---------- */
+
+/* Same box as the poster, on top of it: only this layer is drawn again while the walker moves. */
+.scene .scene-track {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.p-trail-done {
+  fill: none;
+  stroke: #e8664a;
+  stroke-width: 7;
+  stroke-linecap: round;
+  /* Hidden until the walker's place is known. */
+  stroke-dasharray: 0 100000;
+}
+
+.world-0 .p-trail-done,
+.world-1 .p-trail-done {
+  stroke: #f08c3c;
+}
+
+.world-4 .p-trail-done {
+  stroke: #f2c230;
+}
+
+/* ---------- A world completed: full screen, bigger at each world ---------- */
+
+.world-done {
+  position: fixed;
+  inset: 0;
+  z-index: 46;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 20px calc(100px + env(safe-area-inset-bottom, 0px));
+  color: #1d2a44;
+  text-align: center;
+  animation: fade-in 360ms ease;
+}
+
+.world-done.done-0 {
+  background: radial-gradient(circle at 50% 32%, #d6dde4 0%, #8d97a4 42%, #45526a 100%);
+  color: #fff8ea;
+}
+
+.world-done.done-1 {
+  background: linear-gradient(180deg, #86aac7 0%, #bcd3e4 55%, #eef3f6 100%);
+}
+
+.world-done.done-2 {
+  background: radial-gradient(circle at 50% 30%, #fff3b0 0%, #9fd2f2 40%, #3d9ee0 100%);
+}
+
+.world-done.done-3 {
+  background: linear-gradient(180deg, #2b1f4f 0%, #6c3f96 30%, #ef7b5a 64%, #fcc98a 100%);
+  color: #fff8ea;
+}
+
+.world-done.done-2 .wd-bg-rays {
+  background: repeating-conic-gradient(rgb(255 255 255 / 0.3) 0deg 8deg, transparent 8deg 16deg);
+  animation-duration: 22s;
+}
+
+.world-done.done-3 .wd-bg-rays {
+  background: repeating-conic-gradient(rgb(255 210 120 / 0.2) 0deg 7deg, transparent 7deg 14deg);
+  animation-duration: 16s;
+}
+
+/* The rain of the world just left stops little by little. */
+.wd-rain-off {
+  animation: wd-fade-out 2.6s ease 0.3s forwards;
+}
+
+@keyframes wd-fade-out {
+  to { opacity: 0; }
+}
+
+.wd-center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 440px;
+}
+
+.wd-art {
+  display: block;
+  width: min(82vw, 340px);
+  height: auto;
+  margin-bottom: 2px;
+  overflow: visible;
+}
+
+.wd-title {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2.2rem, 10vw, 3rem);
+  line-height: 1.05;
+  animation: drop-in 560ms var(--ease-out) 700ms both;
+}
+
+.done-0 .wd-title {
+  text-shadow: 0 3px 0 #1d2a44;
+}
+
+.done-3 .wd-title {
+  color: #fff3b0;
+  text-shadow: 0 3px 0 #1d2a44, 0 0 24px rgb(242 194 48 / 0.55);
+}
+
+.done-0 .finale-kicker,
+.done-0 .finale-note,
+.done-3 .finale-kicker,
+.done-3 .finale-note {
+  text-shadow: 0 1px 2px rgb(29 42 68 / 0.6);
+}
+
+.wd-worlds li {
+  font-size: 1.25rem;
+}
+
+.wd-worlds li.house {
+  font-size: 1.3rem;
+}
+
+/* The world coming next hops, waiting for the walker. */
+.wd-worlds li.next {
+  opacity: 1;
+  background: #fff3b0;
+  animation:
+    pop 360ms var(--ease-out) calc(500ms + var(--i) * 260ms) both,
+    wd-hop 700ms ease-in-out calc(1.6s + var(--i) * 260ms) infinite alternate;
+}
+
+@keyframes wd-hop {
+  to { transform: translateY(-6px); }
+}
+
+/* 0 · The storm splits and rolls away, a small sun comes up between the clouds. */
+.wd-storm .wd-small-sun {
+  fill: #ffd23f;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: wd-sun-up 1.4s var(--ease-out) 0.5s both;
+}
+
+@keyframes wd-sun-up {
+  from { opacity: 0; transform: translateY(26px) scale(0.5); }
+  to { opacity: 1; transform: none; }
+}
+
+.wd-storm path {
+  fill: #4b5566;
+  stroke: #2c3646;
+  stroke-width: 1;
+}
+
+.wd-cloud-left {
+  animation: wd-roll-left 2.2s var(--ease-out) 0.3s both;
+}
+
+.wd-cloud-right {
+  animation: wd-roll-right 2.2s var(--ease-out) 0.3s both;
+}
+
+@keyframes wd-roll-left {
+  to { transform: translateX(-74px); opacity: 0.85; }
+}
+
+@keyframes wd-roll-right {
+  to { transform: translateX(74px); opacity: 0.85; }
+}
+
+/* 1 · A rainbow draws itself, band after band, with two clouds at its feet. */
+.wd-rainbow path:not(.wd-foot) {
+  fill: none;
+  stroke-width: 9.4;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: wd-draw 1.2s var(--ease-out) calc(300ms + var(--i) * 140ms) forwards;
+}
+
+@keyframes wd-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+.wd-rainbow .wd-foot {
+  fill: #ffffff;
+  stroke: #9fb3c4;
+  stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: pop 520ms var(--ease-out) 1.3s both;
+}
+
+/* 2 · The sun bursts through: rays spin out and the last clouds fly off. */
+.wd-sunburst {
+  position: relative;
+  width: min(62vw, 250px);
+  aspect-ratio: 1;
+}
+
+.wd-rays {
+  position: absolute;
+  inset: -36%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgb(255 210 63 / 0.55) 0deg 9deg, transparent 9deg 18deg);
+  mask-image: radial-gradient(circle, #000 30%, transparent 70%);
+  -webkit-mask-image: radial-gradient(circle, #000 30%, transparent 70%);
+  animation:
+    wd-rays-in 1.2s var(--ease-out) 0.4s both,
+    spin 14s linear infinite;
+}
+
+@keyframes wd-rays-in {
+  from { opacity: 0; scale: 0.3; }
+  to { opacity: 1; scale: 1; }
+}
+
+.wd-big-sun {
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 38%, #fff8d0 0%, #ffd23f 55%, #f2a33a 100%);
+  box-shadow: 0 0 36px rgb(255 210 63 / 0.85);
+  animation:
+    pop 700ms var(--ease-out) 0.2s both,
+    wd-glow 1.6s ease-in-out 1s infinite alternate;
+}
+
+@keyframes wd-glow {
+  to { scale: 1.06; }
+}
+
+.wd-fly-left,
+.wd-fly-right {
+  position: absolute;
+  top: 34%;
+  width: 58%;
+  fill: #ffffff;
+}
+
+.wd-fly-left {
+  left: -6%;
+  animation: wd-fly-left 1.6s cubic-bezier(0.6, 0, 0.3, 1) 0.6s both;
+}
+
+.wd-fly-right {
+  top: 50%;
+  right: -6%;
+  animation: wd-fly-right 1.6s cubic-bezier(0.6, 0, 0.3, 1) 0.75s both;
+}
+
+@keyframes wd-fly-left {
+  to { transform: translateX(-130%) translateY(-20%); opacity: 0; }
+}
+
+@keyframes wd-fly-right {
+  to { transform: translateX(130%) translateY(14%); opacity: 0; }
+}
+
+/* 3 · The sunset: a big sun sinking into the sea, golden glints, birds going home. */
+.wd-sunset-glow {
+  fill: #ffb24d;
+  opacity: 0.32;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: wd-breathe 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes wd-breathe {
+  from { transform: scale(0.92); opacity: 0.22; }
+  to { transform: scale(1.08); opacity: 0.42; }
+}
+
+.wd-sunset-sun {
+  fill: #ffb24d;
+  animation: wd-sink 3.4s cubic-bezier(0.3, 0, 0.2, 1) 0.2s both;
+}
+
+@keyframes wd-sink {
+  from { transform: translateY(-46px); fill: #ffd23f; }
+  to { transform: translateY(8px); fill: #ff9a4d; }
+}
+
+.wd-sea {
+  fill: #2a4f6e;
+}
+
+.wd-glint {
+  fill: #ffd38a;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: wd-glint 1.4s ease-in-out calc(1.2s + var(--i) * 0.18s) infinite alternate;
+}
+
+@keyframes wd-glint {
+  from { opacity: 0.2; transform: scaleX(0.6); }
+  to { opacity: 1; transform: scaleX(1.1); }
+}
+
+.wd-birds {
+  fill: none;
+  stroke: #1d2a44;
+  stroke-width: 2;
+  stroke-linecap: round;
+  animation: wd-birds 6s ease-in-out infinite alternate;
+}
+
+@keyframes wd-birds {
+  from { transform: translate(-8px, 4px); }
+  to { transform: translate(10px, -6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-done *,
+  .world-done *::before {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+  }
+}
