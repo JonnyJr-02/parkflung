@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { sfx } from '../game/sound'
 import { OUTCOMES, TIER_INFO, type Outcome } from '../game/tiers'
 
 /** One rung of the ladder: pill height plus the gap, in CSS pixels (matches .meter-step). */
@@ -77,7 +78,10 @@ export function RarityMeter({
       fillRef.current?.style.setProperty('transform', `translateY(${(height - px).toFixed(1)}px)`)
     }
     show(0)
+    let stopRoll = () => {}
     const finish = () => {
+      stopRoll()
+      sfx.rarity(outcome)
       setTease(-1)
       setDone(true)
       buzz(outcome === 'miss' ? 60 : 30)
@@ -103,8 +107,11 @@ export function RarityMeter({
     // The climb is timed for the rung where the bar pauses, so its speed gives nothing away.
     const climb = CLIMB_MS[apparent ?? ladder[0]!]
     let shown = 0
+    let bottomHeard = false
+    let settled = false
     timers.push(
       window.setTimeout(() => {
+        stopRoll = sfx.roll()
         const start = performance.now()
         const run = (now: number) => {
           const elapsed = now - start
@@ -113,17 +120,29 @@ export function RarityMeter({
             const t = elapsed / climb
             level = far * (1 - Math.pow(1 - t, 4))
           } else {
+            if (!settled) {
+              // The moment of truth: the bar pushes on, or falls back.
+              settled = true
+              stopRoll()
+              if (pushOn) sfx.up()
+              else sfx.down()
+            }
             const t = Math.min(1, (elapsed - climb) / SETTLE_MS)
             const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
             level = far + (goal - far) * eased
           }
           show(level)
           // Rungs light up as the bar reaches their middle and stay lit (the miss only if it is the answer).
-          if (!missAtBottom && level >= 0.5) setBottomLit(true)
+          if (!missAtBottom && level >= 0.5) {
+            setBottomLit(true)
+            if (!bottomHeard) sfx.rung(0)
+            bottomHeard = true
+          }
           const reached = Math.min(target, Math.max(0, Math.floor(level - 0.5)))
           if (reached > shown) {
             shown = reached
             setLit(reached)
+            sfx.rung(reached)
             buzz(8)
           }
           // The rung above the pause flickers while the bar creeps towards it.
@@ -137,6 +156,7 @@ export function RarityMeter({
     return () => {
       timers.forEach(clearTimeout)
       cancelAnimationFrame(frame)
+      stopRoll()
     }
   }, [outcome, target, height, ladder, missAtBottom])
 

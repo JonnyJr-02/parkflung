@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { WORLDS } from '../game/tiers'
+import { sfx } from '../game/sound'
 import { Walker } from './Scene'
 
 /**
@@ -126,6 +127,7 @@ export function startShow(canvas: HTMLCanvasElement, level: number): () => void 
       if (sinceRocket >= show.fireworksEveryMs) {
         sinceRocket = 0
         rockets.push({ x: w * (0.15 + Math.random() * 0.7), y: h, vy: 9 + Math.random() * 3, top: h * (0.12 + Math.random() * 0.3), color: pick(COLORS) })
+        sfx.rocket()
       }
     }
     for (let i = rockets.length - 1; i >= 0; i--) {
@@ -135,6 +137,7 @@ export function startShow(canvas: HTMLCanvasElement, level: number): () => void 
       ctx.fillRect(r.x - 1.5, r.y, 3, 10)
       if (r.y <= r.top) {
         rockets.splice(i, 1)
+        sfx.bang()
         const count = level === 5 ? 70 : 46
         const second = level === 5 && Math.random() < 0.5 ? pick(COLORS) : r.color
         for (let s = 0; s < count; s++) {
@@ -251,6 +254,7 @@ export function Finale({ target, questions, onDone }: { target: number; question
       if (t < 1) frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
+    sfx.house()
     const timer = window.setTimeout(() => setReady(true), 3800)
     try {
       navigator.vibrate?.([80, 60, 80, 60, 80, 60, 260])

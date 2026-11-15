@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { matchAnswer, type Answer } from '../game/match'
 import type { Question } from '../game/parse'
+import { playWorld, sfx } from '../game/sound'
 import { markSeen } from '../game/store'
 import { cardLabel, halfway, rulesFor, type Surprise } from '../game/surprise'
 import { ladderFor, stopsFor, swapsFor, TIER_INFO, worldOf, WORLDS, type Outcome } from '../game/tiers'
@@ -153,6 +154,12 @@ export function Game({
   const number = committed ? results.length : results.length + 1
   const world = worldOf(score, goal)
   const secondTry = retried === question.id
+
+  // The sounds of the world the walker is in: rain and thunder, wind, birds, waves.
+  useEffect(() => {
+    playWorld(world)
+  }, [world])
+  useEffect(() => () => playWorld(null), [])
   const attemptKey = secondTry ? `${question.id}-2` : question.id
 
   useEffect(() => {
@@ -187,6 +194,7 @@ export function Game({
     }
     markSeen([question.id])
     inputRef.current?.blur()
+    sfx.down()
     zeroPoints({ question, typed: '', outcome: 'miss', retried: secondTry || undefined })
   }
 
@@ -249,6 +257,7 @@ export function Game({
     else {
       // No misses without hardcore: say so and let the player try again.
       setNotFound(typed.trim())
+      sfx.wrong()
       inputRef.current?.select()
     }
   }
@@ -280,6 +289,7 @@ export function Game({
     const now = [...swapped, question]
     const upcoming = nextQuestion([...results.map((result) => result.question), ...now])
     setSwapped(now)
+    sfx.whoosh()
     onSave(results, upcoming, { surprise, retried: undefined, swapped: now.map((item) => item.id) })
     setQuestion(upcoming)
     setTyped('')

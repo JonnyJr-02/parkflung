@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { worldOf, WORLDS } from '../game/tiers'
 import { prefersReducedMotion, startShow } from './Finale'
+import { sfx } from '../game/sound'
 import { Scene } from './Scene'
 
 /** What the ending says, by the world where the walker stopped: 0 is the storm, 4 the sunset. */
@@ -41,6 +42,10 @@ export function GameOver({
     if (!canvas || prefersReducedMotion()) return
     // Rain in the storm, then more confetti, balloons and, at the sunset, fireworks.
     return startShow(canvas, world)
+  }, [world])
+
+  useEffect(() => {
+    sfx.over(world)
   }, [world])
 
   // The walker sets off from the cart while the score counts up, then the button appears.

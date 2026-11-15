@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { cardLabel, prizeInfo, prizeNote, PRIZES, spinPrize, type Prize } from '../game/surprise'
+import { sfx } from '../game/sound'
 import { prefersReducedMotion } from './Finale'
 
 const SLICE = 360 / PRIZES.length
@@ -88,6 +89,9 @@ export function SurpriseSquare({
 
   useEffect(() => () => timers.current.forEach(clearTimeout), [])
   useEffect(() => {
+    sfx.mystery()
+  }, [])
+  useEffect(() => {
     if (stage === 'result') doneRef.current?.focus({ preventScroll: true })
   }, [stage])
 
@@ -103,13 +107,17 @@ export function SurpriseSquare({
     if (prefersReducedMotion()) {
       setTurn(360 - (index * SLICE + SLICE / 2))
       setStage('result')
+      sfx.prize(prizeInfo(won).kind)
       return
     }
-    setTurn(6 * 360 + 360 - (index * SLICE + SLICE / 2) + jitter)
+    const finalTurn = 6 * 360 + 360 - (index * SLICE + SLICE / 2) + jitter
+    setTurn(finalTurn)
     setStage('spinning')
+    sfx.wheel(finalTurn, SPIN_MS / 1000)
     timers.current.push(
       window.setTimeout(() => {
         setStage('result')
+        sfx.prize(prizeInfo(won).kind)
         buzz(prizeInfo(won).kind === 'malus' ? [120] : [60, 50, 60, 50, 140])
       }, SPIN_MS + 250),
     )
@@ -182,6 +190,7 @@ export function SecondChance({ prompt, hardcore = true, onRetry }: { prompt: str
   const retryRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     retryRef.current?.focus({ preventScroll: true })
+    sfx.card()
     buzz([40, 40, 40])
   }, [])
   return (

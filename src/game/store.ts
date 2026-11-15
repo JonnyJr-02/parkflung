@@ -61,6 +61,10 @@ export interface SavedState {
   target: Target
   /** Hardcore mode for new games: misses, passing, and 20 or 40 questions. Off by default. */
   hardcore: boolean
+  /** Sound effects: the thermometer, the rarities, the walk, the wheel, the fireworks. */
+  soundOn: boolean
+  /** The tune on the home screen and the sounds of the worlds (rain, wind, birds, waves). */
+  musicOn: boolean
   current: SavedGame | null
 }
 
@@ -75,6 +79,8 @@ const EMPTY: SavedState = {
   timerSeconds: DEFAULT_TIMER,
   target: DEFAULT_TARGET,
   hardcore: false,
+  soundOn: true,
+  musicOn: true,
   current: null,
 }
 
@@ -92,6 +98,8 @@ function read(): SavedState {
       timerSeconds: isTimerSeconds(data.timerSeconds) ? data.timerSeconds : DEFAULT_TIMER,
       target: isTarget(data.target) ? data.target : DEFAULT_TARGET,
       hardcore: data.hardcore === true,
+      soundOn: data.soundOn !== false,
+      musicOn: data.musicOn !== false,
       current: readGame(data.current),
     }
   } catch {
@@ -138,6 +146,14 @@ export function update(change: (current: SavedState) => SavedState): boolean {
 
 export function getState(): SavedState {
   return state
+}
+
+/** Called after every change of the saved state; returns the function that stops it. */
+export function subscribe(listener: () => void): () => void {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
 }
 
 export function useSavedState(): SavedState {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { WORLDS } from '../game/tiers'
 import { prefersReducedMotion, startShow } from './Finale'
+import { sfx } from '../game/sound'
 import { CLOUD_PATH } from './Weather'
 
 /** What each completed world says: 0 is the storm, 3 the sunny world before the sunset. */
@@ -104,6 +105,7 @@ export function WorldDone({ world, target, onDone }: { world: number; target: nu
   }, [level])
 
   useEffect(() => {
+    sfx.world(world)
     const timer = window.setTimeout(() => setReady(true), prefersReducedMotion() ? 0 : 1500 + world * 400)
     try {
       navigator.vibrate?.([60, 50, 60, 50, 60].slice(0, 1 + world * 2))

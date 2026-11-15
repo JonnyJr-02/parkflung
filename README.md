@@ -11,6 +11,14 @@ di legno fino alla casa di Ale a Varigotti. La partita finisce solo quando ci ar
   il tempo la domanda vale 0 punti, il termometro parte da «bada che storia» e la Carta Rivincita
   fa riprovare dopo «bada che storia». Per questo le domande sono il 25% in meno (15 a 500 punti, 30 a
   1000). Con hardcore il gioco è quello di sempre. La modalità si fissa all'inizio di ogni partita.
+- **Suoni:** tutti generati dal codice (Web Audio), senza file da scaricare. Effetti: rullo e gradini
+  del termometro, «sale» o «ricade», un suono per ogni fascia (trombone triste per «morto di CACCA
+  ADDOSSO !», fanfara per Marco B.), passi dell'omino, campanelli dei mondi e delle tappe, ruota che
+  scatta e rallenta, carta, cambio domanda, risposta che non c'è, ultimi secondi del timer, fuochi
+  d'artificio. Musica e ambienti: musichetta nella Home, pioggia e tuoni, pioggerella, vento,
+  uccellini, onde e gabbiani a seconda del mondo. In Impostazioni si spengono separatamente
+  «Effetti sonori» e «Musica e ambienti». Partono dopo il primo tocco e si fermano con l'app in
+  secondo piano.
 - **Cambia domanda:** nell'angolo in basso a destra un cerchio con le frecce viola e i cambi rimasti
   (per esempio 2/3): 3 cambi a partita a 500 punti, 6 a 1000. La domanda cambiata non ritorna nella
   stessa partita e non conta tra le domande.

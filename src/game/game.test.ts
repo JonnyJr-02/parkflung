@@ -232,6 +232,20 @@ describe('suspense', () => {
   })
 })
 
+describe('sound', () => {
+  it('tunes notes and slows the wheel clicks down to a stop', async () => {
+    const { midi, wheelTickTimes } = await import('./sound')
+    expect(midi(69)).toBe(440)
+    expect(Math.round(midi(60))).toBe(262)
+    const ticks = wheelTickTimes(2500, 5.2)
+    expect(ticks.length).toBe(Math.floor(2500 / 72))
+    for (let i = 1; i < ticks.length; i++) expect(ticks[i]!).toBeGreaterThan(ticks[i - 1]!)
+    // Fast at first, slow at the end.
+    expect(ticks[1]! - ticks[0]!).toBeLessThan(ticks[ticks.length - 1]! - ticks[ticks.length - 2]!)
+    expect(ticks[ticks.length - 1]!).toBeLessThanOrEqual(5.2)
+  })
+})
+
 describe('gaussian tiers', () => {
   it('gives comune and non comune the same number of answers, and raro and esclusivo too', async () => {
     const { gaussianSizes } = await import('./bank')

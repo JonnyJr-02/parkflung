@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Finale } from './components/Finale'
 import { Game, scoreOf, type Result } from './components/Game'
 import { GameOver } from './components/GameOver'
@@ -8,6 +8,7 @@ import { WorldDone } from './components/WorldDone'
 import { mergeBank, pickNext } from './game/bank'
 import type { Question } from './game/parse'
 import { getState, recordGame, saveGame, useSavedState, type SavedGame, type SavedResult } from './game/store'
+import { playTune } from './game/sound'
 import { rulesFor, type Surprise } from './game/surprise'
 import { DEFAULT_TARGET, maxQuestions, OUTCOMES, TIER_INFO, type Target } from './game/tiers'
 
@@ -79,6 +80,11 @@ export function App() {
   const bank = useMemo(() => mergeBank(saved.custom), [saved.custom])
   const byId = useMemo(() => new Map(bank.map((question) => [question.id, question])), [bank])
   const [view, setView] = useState<View>(firstView)
+
+  // The home tune plays on the calm screens; the game has the sounds of its worlds instead.
+  useEffect(() => {
+    playTune(view.name === 'home' || view.name === 'settings' || view.name === 'summary' ? 'home' : null)
+  }, [view.name])
 
   function toResult(result: SavedResult): Result {
     const question = byId.get(result.id) ?? { id: result.id, prompt: result.prompt, answers: [] }

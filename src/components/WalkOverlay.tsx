@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { stopsFor, TIER_INFO, worldOf, WORLDS, type Outcome } from '../game/tiers'
+import { sfx } from '../game/sound'
 import { Scene } from './Scene'
 
 /**
@@ -55,8 +56,17 @@ export function WalkOverlay({
     return () => clearTimeout(start)
   }, [shownTo])
 
+  // Footsteps while the walker walks, one per stride.
+  useEffect(() => {
+    if (points === from || arrived) return
+    sfx.step()
+    const id = window.setInterval(sfx.step, 420)
+    return () => clearInterval(id)
+  }, [points, arrived])
+
   useEffect(() => {
     if (!arrived) return
+    if (milestone) sfx.stop()
     // A new world gets a little longer, to enjoy the new weather.
     const end = window.setTimeout(finish, worldTo > worldFrom ? 3400 : 2200)
     return () => clearTimeout(end)

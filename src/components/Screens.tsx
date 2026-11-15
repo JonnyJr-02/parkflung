@@ -393,6 +393,53 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
       </section>
 
       <section className="panel">
+        <h2>Suoni</h2>
+        <label className="switch-row">
+          <span className="switch-text">
+            <span className="switch-title">Effetti sonori</span>
+            <span className="note">
+              {saved.soundOn
+                ? "Il termometro che sale, le fasce, i passi dell'omino, la ruota della fortuna, i fuochi d'artificio."
+                : 'Spenti: il gioco non fa nessun effetto sonoro.'}
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label="Effetti sonori"
+            className="switch"
+            checked={saved.soundOn}
+            onChange={(event) => {
+              const soundOn = event.target.checked
+              update((current) => ({ ...current, soundOn }))
+            }}
+          />
+        </label>
+        <label className="switch-row">
+          <span className="switch-text">
+            <span className="switch-title">Musica e ambienti</span>
+            <span className="note">
+              {saved.musicOn
+                ? 'La musichetta nella Home e i suoni dei mondi: pioggia e tuoni, vento, uccellini, onde e gabbiani.'
+                : 'Spenti: niente musica e niente suoni dei mondi.'}
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label="Musica e ambienti"
+            className="switch"
+            checked={saved.musicOn}
+            onChange={(event) => {
+              const musicOn = event.target.checked
+              update((current) => ({ ...current, musicOn }))
+            }}
+          />
+        </label>
+        <p className="note">Sul telefono i suoni partono dopo il primo tocco. Con il telefono in silenzioso potresti non sentirli.</p>
+      </section>
+
+      <section className="panel">
         <h2>Domande</h2>
         <p>
           {bank.length} domande in tutto: {builtIn.questions.length + derived.length} incluse nell'app e{' '}
