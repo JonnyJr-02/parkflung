@@ -1,4 +1,4 @@
-import { makeKey, type Answer } from './match'
+import { makeKey, withoutBrackets, type Answer } from './match'
 import { TIERS, type Tier } from './tiers'
 
 /**
@@ -167,6 +167,7 @@ export function parseUpload(text: string): ParseResult {
 /** Turns a stored question into one ready for matching. An answer listed twice keeps its commonest tier. */
 export function compile(raw: RawQuestion): Question {
   const answers: Answer[] = []
+  const written: string[][] = []
   const taken = new Set<string>()
   for (const tier of TIERS) {
     for (const entry of raw[tier]) {
@@ -178,7 +179,20 @@ export function compile(raw: RawQuestion): Question {
       if (keys.length === 0) continue
       keys.forEach((key) => taken.add(key.squashed))
       answers.push({ label: forms[0]!, tier, keys })
+      written.push(forms)
     }
   }
+  // Then the same answers without the words in brackets ("Argo (cane di Ulisse)" is also "Argo"),
+  // once every written spelling has its answer, so that they never take one from another answer.
+  answers.forEach((answer, index) => {
+    for (const form of written[index]!) {
+      const plain = withoutBrackets(form)
+      if (!plain || plain === form) continue
+      const key = makeKey(plain)
+      if (!key.squashed || taken.has(key.squashed)) continue
+      taken.add(key.squashed)
+      answer.keys.push(key)
+    }
+  })
   return { id: questionId(raw.q), prompt: raw.q, answers }
 }

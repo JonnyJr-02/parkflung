@@ -37,9 +37,16 @@ di legno fino alla casa di Ale a Varigotti. La partita finisce solo quando ci ar
   Shave like a Bomber! (50), Jonny 🍆 (75), Marco B. (100).
 - **Rivelazione:** il termometro si ferma, il gradino vicino lampeggia e poi la barra sale o ricade,
   metà e metà, per ogni fascia (anche per «morto di CACCA ADDOSSO !»).
-- **Domande:** 1500, di ogni genere, in ordine casuale diverso per ogni telefono. Escono prima
+- **Domande:** 1501, di ogni genere, in ordine casuale diverso per ogni telefono. Escono prima
   quelle mai giocate, mai una ripetuta nella stessa partita e mai due della stessa famiglia vicine
   (per esempio due «Una città del…»); in Impostazioni si può scegliere se, finite quelle, devono ricapitare.
+  Le domande troppo aperte («Una cosa rossa», «Una cosa che fa rumore»…) sono state tolte o rese più
+  precise; 93 domande chiuse (film di un regista o con un attore, calciatori di una squadra, canzoni di
+  un cantante, libri, quadri, premi Nobel…) vengono da Wikidata, con le risposte in ordine di fama.
+- **Risposte riconosciute:** contano anche senza le parole tra parentesi («Argo» per «Argo (cane di
+  Ulisse)»), senza le parole piccole e in un altro ordine («frutto passione», «Pisa torre») e quando
+  sono il nome dentro una risposta più lunga («Montalbano» per «Il commissario Montalbano»). Se il
+  pezzo scritto va bene per più risposte, o ha parole in più, il gioco chiede «Forse intendevi…?».
 - **Fasce di rarità:** le risposte di ogni domanda, dalla più comune alla più rara, sono divise in tre
   parti: circa metà per bada che storia e parata col petto, metà per Shave like a Bomber! e Jonny 🍆,
   poche per Marco B. Dentro ogni coppia le due fasce hanno lo stesso numero di risposte: le più facili
@@ -64,7 +71,9 @@ domanda :: comuni :: non comuni :: rare :: esclusive :: top
 
 Risposte separate da virgole, dalla più comune alla più rara; modi diversi di scrivere la stessa
 risposta separati da `/`. La divisione in fasce la rifà il gioco con queste percentuali, quindi conta
-soprattutto l'ordine. Se una domanda compare in più file, le risposte si sommano (`pack-50-extra.txt`).
+soprattutto l'ordine. Se una domanda compare in più file, le risposte si sommano (`pack-50-extra.txt`,
+`pack-90-extra.txt`). Le domande da Wikidata sono in `pack-70-wikidata.txt`: in cima le risposte con la
+voce di Wikipedia presente in più lingue e più lunga in italiano (per le città conta anche quanti abitanti hanno).
 Una sola domanda «… che inizia con la X» per argomento è generata da quelle scritte (`src/game/bank.ts`).
 
 ## Comandi

@@ -47,13 +47,38 @@ describe('matching an answer', () => {
     expect(label('spiderman')).toBe('exact:Spider-Man')
     expect(label('fico d india')).toBe("exact:fico d'India")
     expect(label('fichi d’India')).toBe("exact:fico d'India")
+    expect(label('frutto passione')).toBe('exact:frutto della passione')
   })
 
   it('asks before accepting a near miss', () => {
     expect(label('bannana')).toBe('suggest:banana')
     expect(label('melogrno')).toBe('suggest:melograno')
     expect(label('maracuia')).toBe('suggest:frutto della passione')
-    expect(label('frutto passione')).toBe('suggest:frutto della passione')
+  })
+
+  it('accepts an answer without its brackets or with words more or less', () => {
+    const famous = compile({
+      q: 'Un personaggio famoso',
+      c: ['Il commissario Montalbano', 'Ade (Hercules)'],
+      n: ['Argo (cane di Ulisse)', 'Lago di Garda'],
+      r: ['Pizza margherita'],
+      e: ['torta'],
+      t: ['Torre di Pisa', 'Torre Eiffel'],
+    }).answers
+    const said = (input: string) => {
+      const result = matchAnswer(input, famous)
+      return result.kind === 'miss' ? 'miss' : `${result.kind}:${result.answer.label}`
+    }
+    expect(said('Ade')).toBe('exact:Ade (Hercules)')
+    expect(said('argo')).toBe('exact:Argo (cane di Ulisse)')
+    expect(said('Montalbano')).toBe('exact:Il commissario Montalbano')
+    expect(said('garda')).toBe('exact:Lago di Garda')
+    expect(said('Pisa torre')).toBe('exact:Torre di Pisa')
+    expect(said('torta della nonna')).toBe('suggest:torta')
+    expect(said('margherita')).toBe('exact:Pizza margherita')
+    expect(said('pizza')).toBe('suggest:Pizza margherita')
+    expect(said('torre')).toBe('suggest:Torre di Pisa')
+    expect(said('montalbamo')).toBe('suggest:Il commissario Montalbano')
   })
 
   it('misses what is not in the list', () => {

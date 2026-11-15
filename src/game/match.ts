@@ -6,6 +6,10 @@ export interface AnswerKey {
   /** Same, with each token reduced to its stem, so singular and plural meet. */
   stemmed: string
   stems: string[]
+  /** The stems without the little words ("di", "della", "e"…), in order: "frutto della passione" → frutt, passion. */
+  words: string[]
+  /** The same words sorted, so that "Pisa torre" and "Torre di Pisa" meet. */
+  loose: string
 }
 
 export interface Answer {
@@ -43,10 +47,27 @@ export function stem(token: string): string {
   return out
 }
 
+/** Little words that do not change an answer: "frutto passione" is "frutto della passione". */
+const FILLERS = new Set([
+  'di', 'del', 'dello', 'della', 'dell', 'dei', 'degli', 'delle', 'd',
+  'da', 'dal', 'dallo', 'dalla', 'dall', 'dai', 'dagli', 'dalle',
+  'a', 'ad', 'al', 'allo', 'alla', 'all', 'ai', 'agli', 'alle',
+  'in', 'nel', 'nello', 'nella', 'nell', 'nei', 'negli', 'nelle',
+  'con', 'col', 'coi', 'su', 'sul', 'sullo', 'sulla', 'sull', 'sui', 'sugli', 'sulle',
+  'per', 'tra', 'fra', 'e', 'ed', 'o', 'the', 'of', 'and',
+])
+
 export function makeKey(text: string): AnswerKey {
   const tokens = tokenize(text)
   const stems = tokens.map(stem)
-  return { squashed: tokens.join(''), stemmed: stems.join(''), stems }
+  const content = stems.filter((_, index) => !FILLERS.has(tokens[index]!))
+  const words = content.length > 0 ? content : stems
+  return { squashed: tokens.join(''), stemmed: stems.join(''), stems, words, loose: [...words].sort().join(' ') }
+}
+
+/** The same answer without the words in brackets, which only explain it: "Ade (Hercules)" → "Ade". */
+export function withoutBrackets(text: string): string {
+  return text.replace(/\s*\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
 /** Optimal string alignment distance: insertions, deletions, substitutions and swapped neighbours. */
@@ -104,6 +125,32 @@ export function matchAnswer(input: string, answers: readonly Answer[]): MatchRes
   if (sameStem.length === 1) return { kind: 'exact', answer: sameStem[0]! }
   if (sameStem.length > 1) return { kind: 'suggest', answer: sameStem[0]! }
 
+  // The same words, give or take the little ones and the order: "frutto passione", "Pisa torre".
+  const sameWords = answers.filter((answer) => answer.keys.some((key) => key.loose === typed.loose))
+  if (sameWords.length === 1) return { kind: 'exact', answer: sameWords[0]! }
+  if (sameWords.length > 1) return { kind: 'suggest', answer: sameWords[0]! }
+
+  // A part of the answer ("Vinci" for "Leonardo da Vinci") or the answer plus extra words. A part of
+  // one answer only counts at once when it holds the name, that is the last word ("Montalbano" for
+  // "Il commissario Montalbano"); otherwise we ask, as for extra words ("Alberto Angela" is not
+  // "Piero Angela/Angela"). Whole words come before typos: "torre" is a part of "Torre Eiffel" more
+  // than a typo of "torta".
+  let partial: { answer: Answer; gap: number } | undefined
+  const found = new Set<Answer>()
+  let sure = false
+  for (const answer of answers) {
+    for (const key of answer.keys) {
+      const typedInside = isSubset(typed.stems, key.stems) && typed.stemmed.length >= 4
+      const keyInside = isSubset(key.stems, typed.stems) && key.stemmed.length >= 4
+      if (!typedInside && !keyInside) continue
+      found.add(answer)
+      if (typedInside && typed.stems.includes(key.words[key.words.length - 1]!)) sure = true
+      const gap = Math.abs(key.squashed.length - typed.squashed.length)
+      if (!partial || gap < partial.gap) partial = { answer, gap }
+    }
+  }
+  if (partial) return { kind: found.size === 1 && sure ? 'exact' : 'suggest', answer: partial.answer }
+
   let best: { answer: Answer; distance: number } | undefined
   for (const answer of answers) {
     for (const key of answer.keys) {
@@ -118,18 +165,25 @@ export function matchAnswer(input: string, answers: readonly Answer[]): MatchRes
   }
   if (best) return { kind: 'suggest', answer: best.answer }
 
-  // A part of the answer ("Vinci" for "Leonardo da Vinci") or the answer plus extra words.
-  let partial: { answer: Answer; gap: number } | undefined
-  for (const answer of answers) {
-    for (const key of answer.keys) {
-      const typedInside = isSubset(typed.stems, key.stems) && typed.stemmed.length >= 4
-      const keyInside = isSubset(key.stems, typed.stems) && key.stemmed.length >= 4
-      if (!typedInside && !keyInside) continue
-      const gap = Math.abs(key.squashed.length - typed.squashed.length)
-      if (!partial || gap < partial.gap) partial = { answer, gap }
+  // The words of the answer with a typo: "montalbamo" for "Il commissario Montalbano".
+  const typedWords = typed.words.filter((word) => word.length >= 4)
+  let close: { answer: Answer; typos: number } | undefined
+  if (typedWords.length > 0) {
+    for (const answer of answers) {
+      for (const key of answer.keys) {
+        let typos = 0
+        const all = typedWords.every((word) => {
+          const best = Math.min(...key.words.map((other) => editDistance(word, other)))
+          const other = key.words.find((candidate) => editDistance(word, candidate) === best) ?? ''
+          if (best > allowedTypos(Math.max(word.length, other.length))) return false
+          typos += best
+          return true
+        })
+        if (all && (!close || typos < close.typos)) close = { answer, typos }
+      }
     }
   }
-  if (partial) return { kind: 'suggest', answer: partial.answer }
+  if (close) return { kind: 'suggest', answer: close.answer }
 
   return { kind: 'miss' }
 }
