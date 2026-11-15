@@ -11,6 +11,9 @@ di legno fino alla casa di Ale a Varigotti. La partita finisce solo quando ci ar
   il tempo la domanda vale 0 punti, il termometro parte da «bada che storia» e la Carta Rivincita
   fa riprovare dopo «bada che storia». Per questo le domande sono il 25% in meno (15 a 500 punti, 30 a
   1000). Con hardcore il gioco è quello di sempre. La modalità si fissa all'inizio di ogni partita.
+- **Cambia domanda:** nell'angolo in basso a destra un cerchio con le frecce viola e i cambi rimasti
+  (per esempio 2/3): 3 cambi a partita a 500 punti, 6 a 1000. La domanda cambiata non ritorna nella
+  stessa partita e non conta tra le domande.
 - **Domande contate:** in hardcore al massimo 20 domande a 500 punti, 40 a 1000. Se finiscono prima della casa,
   parte un'animazione a schermo intero: l'omino cammina fino a dove si è fermato, nel meteo del suo
   mondo, con una festa che cresce col mondo raggiunto (pioggia nel temporale, fuochi al tramonto).

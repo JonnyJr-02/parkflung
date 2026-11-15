@@ -40,6 +40,11 @@ export function maxQuestions(target: number, hardcore = true): number {
   return Math.round((target / 25) * (hardcore ? 1 : 0.75))
 }
 
+/** Times a question can be swapped for another in a game: 3 to reach 500 points, 6 for 1000. */
+export function swapsFor(target: number): number {
+  return Math.round((target / 500) * 3)
+}
+
 /** The rarities a game can end on, from the bottom of the meter: without hardcore there is no miss. */
 export function ladderFor(hardcore: boolean): readonly Outcome[] {
   return hardcore ? OUTCOMES : OUTCOMES.filter((outcome) => outcome !== 'miss')

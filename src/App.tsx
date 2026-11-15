@@ -20,7 +20,7 @@ type View =
       target: Target
       hardcore: boolean
       timer: number
-      start: { results: Result[]; question: Question; surprise?: Surprise; retried?: string }
+      start: { results: Result[]; question: Question; surprise?: Surprise; retried?: string; swapped: Question[] }
     }
   /** The end of a game, then the summary: the arrival at the house of Ale, or the questions run out. */
   /** `target` is the points the house was at in the end, after the wheel of fortune. */
@@ -111,7 +111,9 @@ export function App() {
     }
     const pending = game.pending ? byId.get(game.pending) : undefined
     const answered = new Set(game.results.map((result) => result.id))
-    const question = pending && !answered.has(pending.id) ? pending : nextQuestion(results.map((result) => result.question))
+    const swapped = (game.swapped ?? []).map((id) => byId.get(id)).filter((question): question is Question => !!question)
+    const question =
+      pending && !answered.has(pending.id) ? pending : nextQuestion([...results.map((result) => result.question), ...swapped])
     saveGame({ ...game, pending: question.id })
     // The Carta Rivincita used on the question on screen stays used when the game is picked up again.
     const retried = game.retried === question.id ? game.retried : undefined
@@ -121,7 +123,7 @@ export function App() {
       target: game.target,
       hardcore,
       timer: timerOn ? timerSeconds : 0,
-      start: { results, question, surprise: game.surprise, retried },
+      start: { results, question, surprise: game.surprise, retried, swapped },
     })
   }
 
@@ -141,7 +143,7 @@ export function App() {
     hardcore: boolean,
     results: Result[],
     onScreen: Question | null,
-    extra: { surprise?: Surprise; retried?: string },
+    extra: { surprise?: Surprise; retried?: string; swapped?: string[] },
   ) {
     saveGame({
       target,
@@ -151,6 +153,7 @@ export function App() {
       pending: onScreen?.id,
       surprise: extra.surprise,
       retried: onScreen && extra.retried === onScreen.id ? extra.retried : undefined,
+      swapped: extra.swapped ?? getState().current?.swapped,
     })
   }
 

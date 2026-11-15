@@ -41,6 +41,8 @@ export interface SavedGame {
   retried?: string
   /** Played in hardcore mode (with misses). Missing in games saved before the mode existed: those were hardcore. */
   hardcore?: boolean
+  /** Questions swapped for another with «cambia domanda»: they count against the swaps and do not come back. */
+  swapped?: string[]
 }
 
 export interface SavedState {
@@ -109,6 +111,7 @@ function readGame(value: unknown): SavedGame | null {
     surprise: readSurprise(game.surprise),
     retried: typeof game.retried === 'string' ? game.retried : undefined,
     hardcore: typeof game.hardcore === 'boolean' ? game.hardcore : undefined,
+    swapped: Array.isArray(game.swapped) ? game.swapped.filter((id): id is string => typeof id === 'string') : undefined,
   }
 }
 

@@ -282,6 +282,8 @@ describe('a game until the house', () => {
     expect(maxQuestions(1000)).toBe(40)
     // Without hardcore there are no misses, and a quarter fewer questions.
     expect(maxQuestions(500, false)).toBe(15)
+    const { swapsFor } = await import('./tiers')
+    expect([swapsFor(500), swapsFor(1000)]).toEqual([3, 6])
     expect(maxQuestions(1000, false)).toBe(30)
     const { GAME_OVER } = await import('../components/GameOver')
     expect(GAME_OVER).toHaveLength(WORLDS.length)

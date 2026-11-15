@@ -177,18 +177,8 @@ export function SurpriseSquare({
   )
 }
 
-/** After the lowest rarity, with the Carta Rivincita in hand: answer the same question once more, or not. */
-export function SecondChance({
-  prompt,
-  hardcore = true,
-  onRetry,
-  onKeep,
-}: {
-  prompt: string
-  hardcore?: boolean
-  onRetry: () => void
-  onKeep: () => void
-}) {
+/** After the lowest rarity, with the Carta Rivincita in hand: answer the same question once more. */
+export function SecondChance({ prompt, hardcore = true, onRetry }: { prompt: string; hardcore?: boolean; onRetry: () => void }) {
   const retryRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     retryRef.current?.focus({ preventScroll: true })
@@ -209,9 +199,6 @@ export function SecondChance({
       </p>
       <button ref={retryRef} type="button" className="btn second-retry" onClick={onRetry}>
         Rispondi di nuovo
-      </button>
-      <button type="button" className="btn ghost second-keep" onClick={onKeep}>
-        Va bene così
       </button>
     </div>
   )

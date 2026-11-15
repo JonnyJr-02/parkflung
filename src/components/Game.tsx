@@ -3,7 +3,7 @@ import { matchAnswer, type Answer } from '../game/match'
 import type { Question } from '../game/parse'
 import { markSeen } from '../game/store'
 import { cardLabel, halfway, rulesFor, type Surprise } from '../game/surprise'
-import { ladderFor, stopsFor, TIER_INFO, worldOf, WORLDS, type Outcome } from '../game/tiers'
+import { ladderFor, stopsFor, swapsFor, TIER_INFO, worldOf, WORLDS, type Outcome } from '../game/tiers'
 import { Farflung } from './Farflung'
 import { RarityMeter } from './RarityMeter'
 import { SecondChance, SurpriseSquare } from './Surprise'
@@ -107,9 +107,13 @@ export function Game({
   /** Seconds for each question, 0 for no timer. */
   timer: number
   /** What was already answered (when picking up a saved game), the question to show now and the "?" square. */
-  start: { results: Result[]; question: Question; surprise?: Surprise; retried?: string }
+  start: { results: Result[]; question: Question; surprise?: Surprise; retried?: string; swapped: Question[] }
   nextQuestion: (asked: Question[]) => Question
-  onSave: (results: Result[], onScreen: Question | null, extra: { surprise?: Surprise; retried?: string }) => void
+  onSave: (
+    results: Result[],
+    onScreen: Question | null,
+    extra: { surprise?: Surprise; retried?: string; swapped?: string[] },
+  ) => void
   /** The game is over: the house reached at `goal` points, or the questions ran out. */
   onFinish: (results: Result[], goal: number) => void
   onQuit: () => void
@@ -124,6 +128,8 @@ export function Game({
   const [firstTry, setFirstTry] = useState<Result | undefined>(undefined)
   /** Without hardcore: the last answer typed that is not on the list. */
   const [notFound, setNotFound] = useState<string | null>(null)
+  /** Questions swapped for another in this game: they do not come back. */
+  const [swapped, setSwapped] = useState<Question[]>(start.swapped)
   // Picked up past the "?" square without having met it (left during the choice): it comes first.
   const [phase, setPhase] = useState<Phase>(() =>
     !start.surprise && scoreOf(start.results) >= halfway(target) && scoreOf(start.results) < target
@@ -252,7 +258,7 @@ export function Game({
       onFinish(results, goal)
       return
     }
-    const upcoming = nextQuestion(results.map((result) => result.question))
+    const upcoming = nextQuestion([...results.map((result) => result.question), ...swapped])
     setRetried(undefined)
     onSave(results, upcoming, { surprise, retried: undefined })
     setQuestion(upcoming)
@@ -262,10 +268,47 @@ export function Game({
   }
 
   const answering = phase.kind === 'ask' || phase.kind === 'confirm'
+  const maxSwaps = swapsFor(target)
+  const swapsLeft = Math.max(0, maxSwaps - swapped.length)
+  /** Not on the second try with the card: the first answer would be lost. */
+  const canSwap = phase.kind === 'ask' && swapsLeft > 0 && !secondTry
+
+  /** «Cambia domanda»: another question in the same place, a few times per game. */
+  function swapQuestion() {
+    if (!canSwap) return
+    markSeen([question.id])
+    const now = [...swapped, question]
+    const upcoming = nextQuestion([...results.map((result) => result.question), ...now])
+    setSwapped(now)
+    onSave(results, upcoming, { surprise, retried: undefined, swapped: now.map((item) => item.id) })
+    setQuestion(upcoming)
+    setTyped('')
+    setNotFound(null)
+  }
 
   return (
     <main className={timer > 0 ? 'screen game has-timer' : 'screen game'}>
       {timer > 0 && <Timer key={attemptKey} seconds={timer} running={answering} onExpire={timeUp} />}
+      {answering && (
+        <button
+          type="button"
+          className={swapsLeft > 0 ? 'swap' : 'swap empty'}
+          onClick={swapQuestion}
+          disabled={!canSwap}
+          aria-label={`Cambia domanda: ${swapsLeft} cambi rimasti su ${maxSwaps}`}
+          title="Cambia domanda"
+        >
+          <svg viewBox="0 0 32 32" aria-hidden="true">
+            <path className="swap-arrow" d="M6 13 A10 10 0 0 1 24 9" />
+            <path className="swap-head" d="M25.5 3.5 L24.5 10 L18 9" />
+            <path className="swap-arrow" d="M26 19 A10 10 0 0 1 8 23" />
+            <path className="swap-head" d="M6.5 28.5 L7.5 22 L14 23" />
+          </svg>
+          <span className="swap-count">
+            {swapsLeft}/{maxSwaps}
+          </span>
+        </button>
+      )}
       <header className="game-top">
         <button type="button" className="link" onClick={onQuit}>
           Esci
@@ -421,7 +464,7 @@ export function Game({
         />
       )}
 
-      {phase.kind === 'second' && <SecondChance prompt={question.prompt} hardcore={hardcore} onRetry={() => retry(phase.result)} onKeep={() => commit(phase.result)} />}
+      {phase.kind === 'second' && <SecondChance prompt={question.prompt} hardcore={hardcore} onRetry={() => retry(phase.result)} />}
     </main>
   )
 }
