@@ -303,6 +303,18 @@ export const LETTER_GROUPS: ReadonlyArray<{ subject: string; sources: string[] }
     ],
   },
   {
+    subject: 'Uno Stato',
+    sources: [
+      "Uno Stato dell'Unione Europea",
+      "Uno Stato europeo che non fa parte dell'Unione Europea",
+      "Uno Stato dell'Africa",
+      "Uno Stato dell'Asia",
+      'Uno Stato del Sud America',
+      "Uno Stato dell'Oceania",
+      "Un Paese dell'America centrale o dei Caraibi",
+    ],
+  },
+  {
     subject: 'Una cosa da bere',
     sources: [
       'Una bevanda analcolica',

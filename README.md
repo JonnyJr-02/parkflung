@@ -37,12 +37,15 @@ di legno fino alla casa di Ale a Varigotti. La partita finisce solo quando ci ar
   Shave like a Bomber! (50), Jonny 🍆 (75), Marco B. (100).
 - **Rivelazione:** il termometro si ferma, il gradino vicino lampeggia e poi la barra sale o ricade,
   metà e metà, per ogni fascia (anche per «morto di CACCA ADDOSSO !»).
-- **Domande:** 1501, di ogni genere, in ordine casuale diverso per ogni telefono. Escono prima
+- **Domande:** 1516, di ogni genere, in ordine casuale diverso per ogni telefono. Escono prima
   quelle mai giocate, mai una ripetuta nella stessa partita e mai due della stessa famiglia vicine
   (per esempio due «Una città del…»); in Impostazioni si può scegliere se, finite quelle, devono ricapitare.
   Le domande troppo aperte («Una cosa rossa», «Una cosa che fa rumore»…) sono state tolte o rese più
   precise; 93 domande chiuse (film di un regista o con un attore, calciatori di una squadra, canzoni di
   un cantante, libri, quadri, premi Nobel…) vengono da Wikidata, con le risposte in ordine di fama.
+  Geografia (`pack-72-geografia.txt`): confini (Francia, Austria, Cina, Russia, Brasile), mari e oceani
+  (Baltico, Nero o Caspio, Indiano, Pacifico, Atlantico), bandiere (stelle, tre strisce verticali,
+  croce, animale) e «Uno Stato che inizia con la …».
 - **Risposte riconosciute:** contano anche senza le parole tra parentesi («Argo» per «Argo (cane di
   Ulisse)»), senza le parole piccole e in un altro ordine («frutto passione», «Pisa torre») e quando
   sono il nome dentro una risposta più lunga («Montalbano» per «Il commissario Montalbano»). Se il
