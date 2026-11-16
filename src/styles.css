@@ -3368,6 +3368,12 @@ button {
   transition: transform 150ms ease;
 }
 
+/* With the keyboard open (iPhone), just above the keys, still in the corner. */
+.keyboard-open .swap {
+  top: calc(var(--vv-bottom, 100dvh) - 72px);
+  bottom: auto;
+}
+
 .swap:active:not(:disabled) {
   transform: translateY(3px) rotate(-30deg);
   box-shadow: 0 1px 0 var(--edge);

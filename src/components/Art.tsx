@@ -647,12 +647,16 @@ export function Lights({ world }: { world: WorldId }) {
 // ---------- Night skies ----------
 
 /** Many little stars, twinkling (full poster units). */
-export function Stars() {
-  const stars = [
+/** A starry sky; `high` adds the stars above the poster, for tall screens. */
+export function Stars({ high = false }: { high?: boolean }) {
+  const low = [
     [16, 20], [52, 48], [90, 14], [128, 36], [160, 70], [206, 18], [238, 54], [270, 26], [312, 10], [356, 40],
     [30, 96], [74, 120], [118, 88], [184, 110], [226, 92], [262, 130], [340, 92], [10, 150], [150, 150], [200, 160],
     [300, 150], [360, 136], [96, 170], [250, 176],
   ]
+  const stars = high
+    ? [...low, ...low.map(([x, y]) => [(x! + 40) % 375, y! - 190]), ...low.map(([x, y]) => [(x! + 110) % 375, y! - 380])]
+    : low
   return (
     <g className="sky-stars">
       {stars.map(([x, y], n) => (

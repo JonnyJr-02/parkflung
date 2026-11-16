@@ -26,6 +26,15 @@ const SKY_CLOUDS: ReadonlyArray<ReadonlyArray<[number, number, number]>> = [
   [[20, 176, 1.5], [116, 200, 1.1], [300, 160, 1.2]],
 ]
 
+/** Clouds above the poster for tall screens, in the same order (fewer as the weather clears). */
+const HIGH_CLOUDS: ReadonlyArray<ReadonlyArray<[number, number, number]>> = [
+  [[10, -40, 2], [190, -90, 2.3], [90, -190, 2.1], [260, -250, 1.9], [0, -330, 1.8]],
+  [[30, -60, 1.7], [230, -150, 1.9], [80, -280, 1.6]],
+  [[60, -80, 1.3], [250, -220, 1.2]],
+  [[200, -120, 0.8]],
+  [[40, -60, 1.2], [260, -170, 1]],
+]
+
 /**
  * Walking pace: a short start and stop, and an even speed in between, so the walker strides
  * along instead of rushing through the middle.
@@ -36,6 +45,22 @@ function walkEase(t: number): number {
   if (t < a) return (0.5 * v * t * t) / a
   if (t > 1 - a) return 1 - (0.5 * v * (1 - t) * (1 - t)) / a
   return v * (t - a / 2)
+}
+
+/** Stars in the sky above the poster, shown on tall screens: the same pattern, higher up. */
+const HIGH_STARS: ReadonlyArray<[number, number]> = [
+  [30, -30], [96, -70], [170, -24], [236, -96], [310, -40], [352, -120], [60, -150], [140, -200], [220, -170],
+  [300, -230], [20, -260], [180, -300], [340, -310], [110, -340], [260, -360], [70, -420], [200, -450], [330, -480],
+]
+
+/**
+ * How many units of sky to add above the poster so that its whole width fits the box: on a tall,
+ * narrow phone the poster would otherwise be cut on both sides (the start and the arrival).
+ */
+function skyAbove(width: number, height: number): number {
+  if (width <= 0 || height <= 0) return 0
+  const extra = (W * height) / width - H
+  return extra > 1 ? Math.ceil(extra) : 0
 }
 
 /** Milliseconds for one step: the legs (styles.css, .walking) swing at the same pace. */
@@ -80,6 +105,8 @@ export function Scene({
   children,
 }: SceneProps) {
   const stopPoints = stopsFor(target)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [extra, setExtra] = useState(0)
   const targetRef = useRef(target)
   targetRef.current = target
   const pathRef = useRef<SVGPathElement>(null)
@@ -143,6 +170,19 @@ export function Scene({
     )
   }, [shares])
 
+  // A box taller than the poster gets more sky on top instead of losing the sides.
+  useLayoutEffect(() => {
+    const node = rootRef.current
+    if (!node) return
+    const measure = () => setExtra(skyAbove(node.clientWidth, node.clientHeight))
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+  const viewBox = `0 ${-extra} ${W} ${H + extra}`
+
   // On the first draw, and when the wheel moves the arrival: the walker takes his place on the trail.
   useLayoutEffect(() => {
     place(shownRef.current, 0)
@@ -179,11 +219,11 @@ export function Scene({
   }, [points, msPer100])
 
   return (
-    <div className={`scene sky-${sky} land-${world}${features.night ? ' is-night' : ''} ${className ?? ''}`}>
+    <div ref={rootRef} className={`scene sky-${sky} land-${world}${features.night ? ' is-night' : ''} ${className ?? ''}`}>
       <div className={wobble ? `scene-wob wobble-${wobble}` : 'scene-wob'}>
-        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} preserveAspectRatio="xMidYMid slice">
+        <svg viewBox={viewBox} role="img" aria-label={label} preserveAspectRatio={extra ? 'xMidYMax slice' : 'xMidYMid slice'}>
           <defs>
-            <linearGradient id={`p-sky-${uid}`} x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={`p-sky-${uid}`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={240 + OFFSET}>
               <stop offset="0" className="p-sky-1" />
               <stop offset="0.6" className="p-sky-2" />
               <stop offset="1" className="p-sky-3" />
@@ -195,13 +235,15 @@ export function Scene({
               <rect x="0" y={154 + OFFSET} width={W} height="6" />
             </clipPath>
           </defs>
-          <rect width={W} height={240 + OFFSET} fill={`url(#p-sky-${uid})`} />
+          <rect y={-extra} width={W} height={240 + OFFSET + extra} fill={`url(#p-sky-${uid})`} />
           <g className="p-stars">
-            {[[24, 40], [80, 22], [140, 60], [196, 30], [300, 48], [350, 20], [40, 120], [330, 110], [110, 150], [260, 90]].map(([x, y]) => (
-              <circle key={`${x}-${y}`} cx={x} cy={y} r={1.4} />
-            ))}
+            {[[24, 40], [80, 22], [140, 60], [196, 30], [300, 48], [350, 20], [40, 120], [330, 110], [110, 150], [260, 90], ...(extra ? HIGH_STARS : [])].map(
+              ([x, y]) => (
+                <circle key={`${x}-${y}`} cx={x} cy={y} r={1.4} />
+              ),
+            )}
           </g>
-          {features.stars && <Stars />}
+          {features.stars && <Stars high={extra > 0} />}
           {features.moon && <Moon />}
           {sky === 'noon' ? (
             <g className="p-noon-sun">
@@ -217,7 +259,7 @@ export function Scene({
           )}
           {features.clouds !== null && (
             <g className="p-clouds" key={sky}>
-              {SKY_CLOUDS[features.clouds]!.map(([x, y, scale], n) => (
+              {[...SKY_CLOUDS[features.clouds]!, ...(extra ? HIGH_CLOUDS[features.clouds]! : [])].map(([x, y, scale], n) => (
                 <g key={n} transform={`translate(${x} ${y + OFFSET - 32 * scale}) scale(${scale})`}>
                   <path className="p-cloud" d={CLOUD_PATH} style={{ animationDelay: `-${n * 3}s` }} />
                 </g>
@@ -235,7 +277,7 @@ export function Scene({
           <g transform={`translate(0 ${OFFSET})`}>
             <Landscape world={world} trail={TRAIL} wonderland={features.wonderland} />
             {/* Night darkens the land; lamps, windows and the arrival glow above it. */}
-            <rect className="p-veil" y={-OFFSET} width={W} height={H} />
+            <rect className="p-veil" y={-OFFSET - extra} width={W} height={H + extra} />
             <Lights world={world} />
             <Arrival world={world} />
           </g>
@@ -244,7 +286,7 @@ export function Scene({
           The moving parts on a layer of their own: each frame only the walked trail and the walker are
           drawn again, never the whole poster, so the walk stays smooth on a phone.
         */}
-        <svg className="scene-track" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <svg className="scene-track" viewBox={viewBox} preserveAspectRatio={extra ? 'xMidYMax slice' : 'xMidYMid slice'} aria-hidden="true">
           <g transform={`translate(0 ${OFFSET})`}>
             <path ref={pathRef} className="p-trail-done" d={TRAIL} />
             {stops.map(([x, y], n) => (
