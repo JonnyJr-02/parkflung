@@ -31,8 +31,8 @@ type View =
    */
   | { name: 'finale'; world: WorldId; results: Result[]; target: number; hardcore: boolean; unlocked?: WorldId }
   | { name: 'summary'; world: WorldId; results: Result[]; target: number; hardcore: boolean }
-  /** The end of the whole game, after the arrival of the last world: the title and the credits. */
-  | { name: 'credits'; world: WorldId; summary?: { results: Result[]; target: number; hardcore: boolean } }
+  /** The end of the whole game, after the arrival of the last world and its summary: the credits. */
+  | { name: 'credits'; world: WorldId }
   /** Development only: one step show on its own. */
   | { name: 'step'; world: WorldId; step: number }
   /** Development only: a wheel on its own. */
@@ -209,9 +209,6 @@ export function App() {
     case 'finale': {
       const info: WorldInfo = worldInfo(view.world)
       const toSummary = () => setView({ name: 'summary', world: view.world, results: view.results, target: view.target, hardcore: view.hardcore })
-      // The arrival of the last world ends the whole game: the credits roll before the summary.
-      const toCredits = () =>
-        setView({ name: 'credits', world: view.world, summary: { results: view.results, target: view.target, hardcore: view.hardcore } })
       if (scoreOf(view.results) < view.target) {
         return <GameOver world={info} score={scoreOf(view.results)} target={view.target} questions={view.results.length} onDone={toSummary} />
       }
@@ -221,19 +218,12 @@ export function App() {
           target={view.target}
           questions={view.results.length}
           unlocked={view.unlocked ? worldInfo(view.unlocked) : undefined}
-          last={!nextWorld(view.world)}
-          onDone={nextWorld(view.world) ? toSummary : toCredits}
+          onDone={toSummary}
         />
       )
     }
-    case 'credits': {
-      const { summary, world } = view
-      return (
-        <EndCredits
-          onDone={() => setView(summary ? { name: 'summary', world, ...summary } : { name: 'home' })}
-        />
-      )
-    }
+    case 'credits':
+      return <EndCredits onDone={() => setView({ name: 'home' })} />
     case 'step':
       return <StepDone world={worldInfo(view.world)} step={view.step} goal={worldInfo(view.world).target} onDone={() => setView({ name: 'home' })} />
     case 'wheel':
@@ -246,7 +236,9 @@ export function App() {
           onDone={() => setView({ name: 'home' })}
         />
       )
-    case 'summary':
+    case 'summary': {
+      // The arrival of the last world ends the whole game: after its summary the credits roll.
+      const theEnd = !nextWorld(view.world) && scoreOf(view.results) >= view.target
       return (
         <Summary
           world={worldInfo(view.world)}
@@ -255,7 +247,9 @@ export function App() {
           hardcore={view.hardcore}
           onAgain={() => newGame(view.world)}
           onHome={() => setView({ name: 'home' })}
+          onEnd={theEnd ? () => setView({ name: 'credits', world: view.world }) : undefined}
         />
       )
+    }
   }
 }

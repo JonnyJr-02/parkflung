@@ -311,6 +311,7 @@ export function Summary({
   hardcore,
   onAgain,
   onHome,
+  onEnd,
 }: {
   world: WorldInfo
   results: Result[]
@@ -318,6 +319,8 @@ export function Summary({
   hardcore: boolean
   onAgain: () => void
   onHome: () => void
+  /** The last world was finished: one button, on to the end of the game and its credits. */
+  onEnd?: () => void
 }) {
   const score = Math.min(target, scoreOf(results))
   const arrived = score >= target
@@ -356,12 +359,20 @@ export function Summary({
             <ResultCard key={`${result.question.id}-${index}`} result={result} number={index + 1} hardcore={hardcore} />
           ))}
         </ol>
-        <button type="button" className="btn" onClick={onAgain}>
-          Nuova partita
-        </button>
-        <button type="button" className="btn ghost" onClick={onHome}>
-          Torna all'inizio
-        </button>
+        {onEnd ? (
+          <button type="button" className="btn" onClick={onEnd}>
+            Continua
+          </button>
+        ) : (
+          <>
+            <button type="button" className="btn" onClick={onAgain}>
+              Nuova partita
+            </button>
+            <button type="button" className="btn ghost" onClick={onHome}>
+              Torna all'inizio
+            </button>
+          </>
+        )}
       </div>
     </main>
   )

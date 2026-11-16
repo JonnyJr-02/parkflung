@@ -65,11 +65,12 @@ al traguardo del mondo. App per telefono (PWA), in italiano.
 - **Arrivo:** alla casa di Ale parte l'animazione più bella, a schermo intero (fuochi d'artificio, coriandoli,
   palloncini, la casa con le finestre accese), poi il riepilogo con tutte le risposte della partita.
   In sviluppo `?finale` la mostra subito.
-- **Fine del gioco:** arrivando al Decanter, l'ultimo mondo, dopo l'arrivo compare a tutto schermo
-  «Il gioco è finito!» con i fuochi d'artificio, poi scorrono lenti i titoli di coda con una canzoncina
-  tutta loro (Creato da, Ideato da, Graphic design, Music design: Claude; Assolutamente nessun merito:
-  Jo, Chri, Ale, Tina, Sara, Roma, Colo, Vale, Nico). Non si possono saltare: il pulsante per il
-  riepilogo arriva solo alla fine, dopo «Fine». In sviluppo `?titoli` li mostra subito.
+- **Fine del gioco:** arrivando al Decanter, l'ultimo mondo, dopo l'arrivo con le sue animazioni e
+  dopo il riepilogo (che ha un solo pulsante, «Continua») compare a tutto schermo «Il gioco è finito!»
+  con i fuochi d'artificio, poi scorrono lenti i titoli di coda con una canzoncina tutta loro (Creato
+  da, Ideato da, Graphic design, Music design: Claude; Assolutamente nessun merito: Jo, Chri, Ale,
+  Tina, Sara, Roma, Colo, Vale, Nico). Non si possono saltare: il pulsante per tornare all'inizio
+  arriva solo alla fine, dopo «Fine». In sviluppo `?titoli` li mostra subito.
 - **Solo tema chiaro**, anche quando il telefono è in modalità scura.
 - **Nuove domande:** Impostazioni → «Carica domande da file» (JSON o testo, c'è un file di esempio).
 

@@ -239,7 +239,6 @@ export function Finale({
   target,
   questions,
   unlocked,
-  last = false,
   onDone,
 }: {
   world: WorldInfo
@@ -247,8 +246,6 @@ export function Finale({
   questions: number
   /** The world this arrival opened, the first time it was reached. */
   unlocked?: WorldInfo
-  /** The last world: the end of the whole game comes next, not the summary. */
-  last?: boolean
   onDone: () => void
 }) {
   const level = 5
@@ -332,7 +329,7 @@ export function Finale({
         )}
       </div>
       <button ref={buttonRef} type="button" className={ready ? 'finale-button show' : 'finale-button'} onClick={onDone} tabIndex={ready ? 0 : -1}>
-        {last ? 'Continua' : 'Vedi il riepilogo'}
+        Vedi il riepilogo
       </button>
     </div>
   )

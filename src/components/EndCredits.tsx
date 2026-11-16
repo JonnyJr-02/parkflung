@@ -20,8 +20,9 @@ const TITLE_MS = 4800
 type Phase = 'title' | 'roll' | 'end'
 
 /**
- * The end of the whole game, after the arrival of the last world: a big title, then the credits
- * roll up the screen like at the cinema. It cannot be skipped: the button comes only at the end.
+ * The end of the whole game, after the arrival of the last world and its summary: a big title, then
+ * the credits roll up the screen like at the cinema. It cannot be skipped: the button comes only at
+ * the end, and goes back to the start.
  */
 export function EndCredits({ onDone }: { onDone: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -119,7 +120,7 @@ export function EndCredits({ onDone }: { onDone: () => void }) {
         </div>
       )}
       <button ref={buttonRef} type="button" className={ready ? 'finale-button show' : 'finale-button'} onClick={onDone} tabIndex={ready ? 0 : -1}>
-        Vedi il riepilogo
+        Torna all'inizio
       </button>
     </div>
   )
