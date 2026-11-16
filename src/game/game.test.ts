@@ -379,6 +379,8 @@ describe('the five worlds', () => {
       const tune = TUNES[world.id]
       const beats = tune.melody.reduce((sum, [, length]) => sum + length, 0)
       expect(beats).toBe(tune.roots.length * tune.beatsPerBar)
+      const song = TUNES.credits
+      expect(song.melody.reduce((sum, [, length]) => sum + length, 0)).toBe(song.roots.length * song.beatsPerBar)
     }
   })
 })

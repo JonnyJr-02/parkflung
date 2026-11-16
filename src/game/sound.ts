@@ -17,7 +17,7 @@ let noiseBuffer: AudioBuffer | null = null
 let installed = false
 
 /** The tune the screens asked for; started (again) as soon as sound is allowed. */
-let wantedTune: WorldId | null = null
+let wantedTune: TuneId | null = null
 
 export function midi(note: number): number {
   return 440 * 2 ** ((note - 69) / 12)
@@ -213,7 +213,10 @@ export function wheelTickTimes(turn: number, seconds: number, slice = 72): numbe
   return ticks
 }
 
-// ---------- The tunes, one per world ----------
+// ---------- The tunes, one per world, and the song of the credits ----------
+
+/** A world's tune, or the song at the end of the game. */
+export type TuneId = WorldId | 'credits'
 
 interface Tune {
   bpm: number
@@ -230,7 +233,7 @@ interface Tune {
   hat: number
 }
 
-export const TUNES: Record<WorldId, Tune> = {
+export const TUNES: Record<TuneId, Tune> = {
   // Parcheggio: a slow night groove in A minor.
   parcheggio: {
     bpm: 84,
@@ -331,12 +334,32 @@ export const TUNES: Record<WorldId, Tune> = {
     bass: { type: 'triangle', gain: 0.26 },
     hat: 0.035,
   },
+  // The credits: a slow, warm goodbye song in F, long notes, a little nostalgic.
+  credits: {
+    bpm: 72,
+    beatsPerBar: 4,
+    melody: [
+      [72, 1.5], [70, 0.5], [69, 1], [65, 1],
+      [67, 1], [69, 0.5], [70, 0.5], [72, 2],
+      [74, 1.5], [72, 0.5], [69, 1], [74, 1],
+      [72, 1], [70, 1], [69, 2],
+      [72, 1.5], [70, 0.5], [69, 1], [65, 1],
+      [67, 1], [69, 0.5], [70, 0.5], [72, 1], [76, 1],
+      [77, 1.5], [76, 0.5], [74, 1], [70, 1],
+      [69, 1], [67, 1], [65, 2],
+    ],
+    roots: [53, 48, 50, 46, 53, 48, 46, 53],
+    bassBeats: [0, 2],
+    lead: { type: 'triangle', gain: 0.14, length: 0.95 },
+    bass: { type: 'sine', gain: 0.26 },
+    hat: 0.015,
+  },
 }
 
 let tuneTimer = 0
-let tunePlaying: WorldId | null = null
+let tunePlaying: TuneId | null = null
 
-function startTune(id: WorldId) {
+function startTune(id: TuneId) {
   const r = ready()
   if (!r || tunePlaying === id) return
   stopTune()
@@ -383,9 +406,9 @@ function stopTune() {
   tunePlaying = null
 }
 
-/** The tune of a world, or none. */
-export function playTune(world: WorldId | null): void {
-  wantedTune = world
+/** The tune of a world, the song of the credits, or none. */
+export function playTune(tune: TuneId | null): void {
+  wantedTune = tune
   applyTune()
 }
 

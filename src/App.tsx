@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { EndCredits } from './components/EndCredits'
 import { Finale } from './components/Finale'
 import { Game, scoreOf, type Result } from './components/Game'
 import { GameOver } from './components/GameOver'
@@ -7,7 +8,7 @@ import { StepDone } from './components/StepDone'
 import { SurpriseSquare } from './components/Surprise'
 import { mergeBank, pickNext } from './game/bank'
 import type { Question } from './game/parse'
-import { playTune } from './game/sound'
+import { playTune, type TuneId } from './game/sound'
 import { getState, markReached, recordGame, saveGame, update, useSavedState, type SavedGame, type SavedResult } from './game/store'
 import { rulesFor, WHEELS, type Met } from './game/surprise'
 import { maxQuestions, OUTCOMES, TIER_INFO } from './game/tiers'
@@ -30,6 +31,8 @@ type View =
    */
   | { name: 'finale'; world: WorldId; results: Result[]; target: number; hardcore: boolean; unlocked?: WorldId }
   | { name: 'summary'; world: WorldId; results: Result[]; target: number; hardcore: boolean }
+  /** The end of the whole game, after the arrival of the last world: the title and the credits. */
+  | { name: 'credits'; world: WorldId; summary?: { results: Result[]; target: number; hardcore: boolean } }
   /** Development only: one step show on its own. */
   | { name: 'step'; world: WorldId; step: number }
   /** Development only: a wheel on its own. */
@@ -51,7 +54,8 @@ function toSaved(result: Result): SavedResult {
 /**
  * In development, to try the shows quickly: `?finale=decanter` (the arrival), `?finale=tigros-230`
  * (questions run out at about 230 points), `?step=parcheggio-4` (the show of a step),
- * `?ruota=malus-diamond` (a wheel; `?ruota=classic` can be skipped) and `?sblocca` (all worlds open).
+ * `?ruota=malus-diamond` (a wheel; `?ruota=classic` can be skipped), `?titoli` (the end of the
+ * game with the credits) and `?sblocca` (all worlds open).
  */
 function firstView(): View {
   if (!import.meta.env.DEV) return { name: 'home' }
@@ -59,6 +63,7 @@ function firstView(): View {
   if (params.has('sblocca')) update((current) => ({ ...current, reached: WORLDS.map((world) => world.id) }))
   const [stepWorld, stepIndex] = (params.get('step') ?? '').split('-')
   if (isWorldId(stepWorld)) return { name: 'step', world: stepWorld, step: Math.max(1, Math.min(4, Number(stepIndex) || 1)) }
+  if (params.has('titoli')) return { name: 'credits', world: WORLDS[WORLDS.length - 1]!.id }
   const wheel = params.get('ruota')
   if (wheel && wheel in WHEELS) return { name: 'wheel', wheel: wheel as WheelKind, forced: wheel !== 'classic' }
   const [finaleWorld, wantedText] = (params.get('finale') ?? '').split('-')
@@ -82,7 +87,8 @@ export function App() {
   const [view, setView] = useState<View>(firstView)
 
   // One tune per world: in the game the world played, elsewhere the world shown on the home screen.
-  const tune: WorldId = 'world' in view ? view.world : saved.world
+  // The credits have a song of their own.
+  const tune: TuneId = view.name === 'credits' ? 'credits' : 'world' in view ? view.world : saved.world
   useEffect(() => {
     playTune(tune)
   }, [tune])
@@ -203,6 +209,9 @@ export function App() {
     case 'finale': {
       const info: WorldInfo = worldInfo(view.world)
       const toSummary = () => setView({ name: 'summary', world: view.world, results: view.results, target: view.target, hardcore: view.hardcore })
+      // The arrival of the last world ends the whole game: the credits roll before the summary.
+      const toCredits = () =>
+        setView({ name: 'credits', world: view.world, summary: { results: view.results, target: view.target, hardcore: view.hardcore } })
       if (scoreOf(view.results) < view.target) {
         return <GameOver world={info} score={scoreOf(view.results)} target={view.target} questions={view.results.length} onDone={toSummary} />
       }
@@ -212,7 +221,16 @@ export function App() {
           target={view.target}
           questions={view.results.length}
           unlocked={view.unlocked ? worldInfo(view.unlocked) : undefined}
-          onDone={toSummary}
+          last={!nextWorld(view.world)}
+          onDone={nextWorld(view.world) ? toSummary : toCredits}
+        />
+      )
+    }
+    case 'credits': {
+      const { summary, world } = view
+      return (
+        <EndCredits
+          onDone={() => setView(summary ? { name: 'summary', world, ...summary } : { name: 'home' })}
         />
       )
     }

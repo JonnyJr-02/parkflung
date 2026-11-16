@@ -4891,3 +4891,251 @@ button {
     animation: none;
   }
 }
+
+/* ---------- The end of the game: the big title, then the credits roll slowly ---------- */
+
+.credits {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow: hidden;
+  color: #fff8ea;
+  text-align: center;
+  background:
+    radial-gradient(1.5px 1.5px at 12% 18%, #fff8ea 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 78% 9%, #fff8ea 50%, transparent 51%),
+    radial-gradient(1px 1px at 40% 30%, #fff8ea 50%, transparent 51%),
+    radial-gradient(1px 1px at 88% 42%, #fff8ea 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 22% 64%, #fff8ea 50%, transparent 51%),
+    radial-gradient(1px 1px at 64% 76%, #fff8ea 50%, transparent 51%),
+    radial-gradient(1px 1px at 8% 88%, #fff8ea 50%, transparent 51%),
+    linear-gradient(180deg, #070b18 0%, #141b38 45%, #3a1226 80%, #6b1a2e 100%);
+  animation: fade-in 600ms ease;
+}
+
+.credits .finale-canvas {
+  transition: opacity 500ms ease;
+}
+
+.credits.phase-roll .finale-canvas {
+  opacity: 0;
+}
+
+.credits.phase-end .finale-canvas {
+  opacity: 0.7;
+}
+
+.credits-title {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 24px;
+  transition:
+    opacity 900ms ease,
+    transform 900ms ease;
+}
+
+.credits:not(.phase-title) .credits-title {
+  opacity: 0;
+  transform: scale(0.9) translateY(-30px);
+  pointer-events: none;
+}
+
+.credits-kicker {
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  animation: drop-in 520ms var(--ease-out) 200ms both;
+}
+
+.credits-big {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--serif);
+  font-weight: 400;
+  line-height: 0.95;
+  color: #fff3b0;
+  text-shadow: 0 5px 0 #b57e00, 0 0 34px rgb(242 194 48 / 0.65);
+}
+
+.credits-big .line {
+  display: block;
+  font-size: clamp(3.4rem, 17vw, 6rem);
+}
+
+.credits-big .line.one {
+  animation: credits-slam 700ms var(--ease-out) 500ms both;
+}
+
+.credits-big .line.two {
+  animation: credits-slam 700ms var(--ease-out) 1100ms both;
+}
+
+@keyframes credits-slam {
+  0% { opacity: 0; transform: scale(2.6) rotate(-6deg); }
+  60% { opacity: 1; transform: scale(0.92) rotate(1deg); }
+  100% { opacity: 1; transform: none; }
+}
+
+.credits-worlds {
+  display: flex;
+  gap: 10px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.credits-worlds li {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 2px solid #1d2a44;
+  border-radius: 50%;
+  background: #f2c230;
+  font-size: 1.35rem;
+  box-shadow: 0 3px 0 #1d2a44, 0 0 16px rgb(242 194 48 / 0.7);
+  animation: pop 420ms var(--ease-out) calc(1900ms + var(--i) * 280ms) both;
+}
+
+.credits-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 14%, #000 86%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 14%, #000 86%, transparent 100%);
+}
+
+/* Slowly, like at the cinema: from under the screen until it is gone over the top. */
+.credits-roll {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 64px;
+  padding: 0 24px;
+  animation: credits-roll 52s linear 400ms both;
+}
+
+@keyframes credits-roll {
+  from { transform: translateY(0); }
+  to { transform: translateY(calc(-100% - 100vh)); }
+}
+
+.credits-logo {
+  font-family: var(--serif);
+  font-size: clamp(2.6rem, 13vw, 3.6rem);
+  line-height: 1;
+  color: #fff3b0;
+  text-shadow: 0 3px 0 #b57e00;
+}
+
+.credits-logo em {
+  color: #7fd6c4;
+  font-style: italic;
+}
+
+.credits-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.credits-role {
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #f2c230;
+}
+
+.credits-name {
+  font-family: var(--serif);
+  font-size: clamp(2rem, 10vw, 2.6rem);
+  line-height: 1.1;
+}
+
+.credits-nobody .credits-role {
+  color: #ff8a7a;
+}
+
+.credits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--serif);
+  font-size: clamp(1.6rem, 8vw, 2.1rem);
+  line-height: 1.1;
+}
+
+.credits-number {
+  color: #ff8a7a;
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: 0.7em;
+}
+
+.credits-end {
+  position: absolute;
+  inset: 0 0 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+}
+
+.credits-fine {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(4rem, 22vw, 6.5rem);
+  line-height: 1;
+  color: #fff3b0;
+  text-shadow: 0 0 30px rgb(242 194 48 / 0.6);
+  animation: credits-fine 1600ms ease both;
+}
+
+@keyframes credits-fine {
+  from { opacity: 0; transform: scale(0.8); letter-spacing: 0.3em; }
+  to { opacity: 1; transform: none; letter-spacing: 0; }
+}
+
+.credits-thanks {
+  font-size: 1.05rem;
+  opacity: 0.85;
+  animation: fade-in 900ms ease 900ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .credits-roll {
+    position: static;
+    padding: 80px 24px;
+    animation: none;
+  }
+
+  .credits-viewport {
+    overflow-y: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .credits-big .line,
+  .credits-worlds li,
+  .credits-fine {
+    animation: none;
+  }
+}
