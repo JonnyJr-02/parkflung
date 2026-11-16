@@ -205,27 +205,55 @@ function Supermarket() {
   )
 }
 
-/** The yellow house of Ale with the pool and the white dog. */
+/**
+ * The house of Ale: a yellow house with green shutters and flower boxes, a lawn with a hedge, the
+ * pool on a stone deck in front with a float and an umbrella, and the white dog on his mat.
+ */
 function PoolHouse() {
   return (
     <g className="arr-casa">
-      <rect className="p-ink arr-house-wall" x={286} y={128} width={56} height={50} />
-      <path className="p-ink arr-house-roof" d="M279 130 L314 101 L349 130 Z" />
-      <rect className="p-ink arr-house-roof" x={330} y={104} width={7} height={14} />
-      <rect className="p-ink arr-house-door" x={308} y={152} width={12} height={26} />
-      <rect className="p-ink arr-house-window" x={292} y={138} width={11} height={11} />
-      <rect className="p-ink arr-house-window" x={325} y={138} width={11} height={11} />
-      <rect className="p-ink arr-pool" x={246} y={160} width={36} height={17} rx={3} />
-      <path className="arr-ripple" d="M252 167 q4 -2 8 0 t8 0 M258 172 q4 -2 8 0 t8 0" />
-      <path className="arr-ladder" d="M278 158 v8 M281 158 v8 M278 161 h3" />
+      <path className="arr-lawn" d="M228 184 C 232 166, 300 160, 372 166 V186 H228 Z" />
+      <path className="arr-hedge" d="M236 160 q6 -8 12 0 q6 -8 12 0 q6 -8 12 0 M346 160 q6 -8 12 0 q6 -8 12 0" />
+      <rect className="p-ink arr-house-wall" x={296} y={124} width={60} height={52} />
+      <path className="p-ink arr-house-roof" d="M290 126 L326 98 L362 126 Z" />
+      <rect className="p-ink arr-chimney" x={342} y={102} width={7} height={14} />
+      {[302, 336].map((x) => (
+        <g key={x}>
+          <rect className="p-ink arr-shutter" x={x - 4} y={133} width={4} height={13} />
+          <rect className="p-ink arr-house-window" x={x} y={133} width={12} height={13} />
+          <rect className="p-ink arr-shutter" x={x + 12} y={133} width={4} height={13} />
+          <path className="arr-window-cross" d={`M${x + 6} 133 v13 M${x} 139.5 h12`} />
+          <rect className="p-ink arr-flowerbox" x={x - 1} y={146} width={14} height={4} />
+          <g className="arr-blooms">
+            <circle cx={x + 2} cy={145} r={1.8} />
+            <circle cx={x + 6} cy={144.5} r={1.8} />
+            <circle cx={x + 10} cy={145} r={1.8} />
+          </g>
+        </g>
+      ))}
+      <rect className="p-ink arr-house-door" x={319} y={152} width={14} height={24} rx={6} />
+      <circle className="arr-knob" cx={330} cy={165} r={1} />
+      <rect className="p-ink arr-step" x={316} y={175} width={20} height={4} />
+      <rect className="p-ink arr-deck" x={236} y={162} width={58} height={20} rx={4} />
+      <rect className="p-ink arr-pool" x={241} y={166} width={48} height={12} rx={3} />
+      <path className="arr-ripple" d="M246 170 q4 -2 8 0 t8 0 M262 174 q4 -2 8 0 t8 0" />
+      <ellipse className="arr-float" cx={276} cy={171} rx={6} ry={2.6} />
+      <ellipse className="arr-float-stripes" cx={276} cy={171} rx={6} ry={2.6} />
+      <path className="arr-ladder" d="M245 162 v-6 a2 2 0 0 1 4 0 v6 M251 162 v-6 a2 2 0 0 1 4 0 v6" />
+      <path className="arr-umbrella-pole" d="M288 162 V140" />
+      <path className="p-ink arr-umbrella" d="M274 142 Q 288 126 302 142 Z" />
+      <path className="arr-umbrella-stripes" d="M281 141 Q 284 132 288 129 M295 141 Q 292 132 288 129" />
       <g className="arr-dog">
-        <path className="arr-dog-tail" d="M338 170 q5 -6 2 -10" />
-        <ellipse className="p-ink arr-dog-fur" cx={331} cy={172} rx={8} ry={5} />
-        <path className="arr-dog-legs" d="M326 176 v4 M335 176 v4" />
-        <circle className="p-ink arr-dog-fur" cx={323} cy={165} r={5} />
-        <ellipse className="arr-dog-ear" cx={325} cy={162} rx={2} ry={3.2} />
-        <circle className="arr-dog-eye" cx={321.5} cy={164.5} r={0.9} />
-        <circle className="arr-dog-eye" cx={318.6} cy={166.4} r={1.1} />
+        <rect className="p-ink arr-mat" x={337} y={175} width={22} height={5} rx={2} />
+        <path className="arr-dog-tail" d="M356 172 q5 -3 4 -8" />
+        <ellipse className="p-ink arr-dog-fur" cx={348} cy={172} rx={9} ry={4.5} />
+        <path className="arr-dog-legs" d="M341 176 h-4 M347 176 h-4" />
+        <circle className="p-ink arr-dog-fur" cx={340} cy={166} r={5.2} />
+        <ellipse className="arr-dog-ear" cx={343.5} cy={163.5} rx={2} ry={3.4} />
+        <path className="arr-collar" d="M343 169.5 q-3 2 -6 1" />
+        <circle className="arr-dog-eye" cx={338.6} cy={165.4} r={0.95} />
+        <circle className="arr-dog-eye" cx={335.2} cy={167.2} r={1.2} />
+        <path className="arr-bowl" d="M356 175 h6 l-1 3 h-4 Z" />
       </g>
     </g>
   )
@@ -376,8 +404,22 @@ function Tree({ x, y, s }: { x: number; y: number; s: number }) {
   )
 }
 
-function Cypress({ x, y, s }: { x: number; y: number; s: number }) {
-  return <path className="ld-cypress" transform={`translate(${x} ${y}) scale(${s})`} d="M0 0 C -7 -14, -6 -36, 0 -52 C 6 -36, 7 -14, 0 0 Z" />
+/** A round tree with little lemons. */
+function LemonTree({ x, y, s }: { x: number; y: number; s: number }) {
+  return (
+    <g transform={`translate(${x} ${y}) scale(${s})`}>
+      <path className="ld-trunk" d="M0 0 V-16" />
+      <circle className="ld-tree" cx={0} cy={-24} r={11} />
+      <circle className="ld-tree" cx={-7} cy={-18} r={7} />
+      <circle className="ld-tree" cx={7} cy={-18} r={7} />
+      <g className="ld-lemons">
+        <circle cx={-4} cy={-28} r={1.8} />
+        <circle cx={5} cy={-24} r={1.8} />
+        <circle cx={-6} cy={-18} r={1.8} />
+        <circle cx={6} cy={-15} r={1.8} />
+      </g>
+    </g>
+  )
 }
 
 function Lamp({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
@@ -444,9 +486,14 @@ export function Far({ world }: { world: WorldId }) {
     case 'casa':
       return (
         <>
-          <path className="p-birds" d="M70 70 q6 -6 12 0 q6 -6 12 0" />
-          <path className="ld-mountains" d="M0 220 L40 150 L80 196 L130 130 L190 200 L240 160 L300 210 L340 170 L375 196 V260 H0 Z" />
-          <path className="ld-mountains-snow" d="M130 130 L118 150 L130 146 L142 150 Z M40 150 L32 164 L40 160 L48 164 Z" />
+          <path className="p-birds" d="M70 70 q6 -6 12 0 q6 -6 12 0 M110 96 q5 -5 10 0 q5 -5 10 0" />
+          <path className="ld-far-hills" d="M0 206 C 50 186, 110 190, 160 202 C 210 214, 260 190, 320 192 C 345 193, 362 198, 375 202 V260 H0 Z" />
+          <path className="ld-near-hills" d="M0 226 C 60 208, 130 220, 200 216 C 260 212, 320 204, 375 212 V260 H0 Z" />
+          <g className="ld-far-trees">
+            {[[30, 200], [62, 192], [96, 194], [142, 200], [178, 206], [214, 206], [250, 198]].map(([x, y]) => (
+              <circle key={x} cx={x} cy={y} r={5} />
+            ))}
+          </g>
         </>
       )
     case 'tigros':
@@ -494,17 +541,20 @@ export function Props({ world }: { world: WorldId }) {
     case 'casa':
       return (
         <>
-          <Cypress x={36} y={276} s={1} />
-          <Cypress x={352} y={318} s={1.2} />
-          <Cypress x={226} y={326} s={0.8} />
-          <Tree x={330} y={478} s={1.4} />
-          <Tree x={26} y={470} s={1.2} />
-          <path className="ld-hedge" d="M120 300 q10 -10 20 0 q10 -10 20 0 q10 -10 20 0 M240 410 q10 -10 20 0 q10 -10 20 0" />
-          <g className="p-flowers">
-            {[[120, 470], [180, 480], [236, 468], [96, 432], [272, 430], [150, 360], [300, 380]].map(([x, y]) => (
-              <circle key={`${x}`} cx={x} cy={y} r={3} />
-            ))}
-          </g>
+          <LemonTree x={40} y={278} s={1} />
+          <LemonTree x={350} y={322} s={1.15} />
+          <Tree x={222} y={330} s={0.75} />
+          <LemonTree x={330} y={480} s={1.4} />
+          <Tree x={26} y={472} s={1.2} />
+          <path className="ld-picket" d="M120 304 h60 M120 298 h60 M124 306 v-12 M132 306 v-12 M140 306 v-12 M148 306 v-12 M156 306 v-12 M164 306 v-12 M172 306 v-12 M180 306 v-12" />
+          <path className="ld-hedge" d="M240 412 q10 -10 20 0 q10 -10 20 0" />
+          {[[110, 470, 'a'], [176, 480, 'b'], [238, 468, 'c'], [94, 432, 'b'], [276, 430, 'a'], [146, 360, 'c'], [298, 382, 'b']].map(([x, y, kind]) => (
+            <g key={`${x}`} className={`ld-bed ${kind}`} transform={`translate(${x} ${y})`}>
+              <circle cx={-4} cy={0} r={3} />
+              <circle cx={3} cy={-2} r={3} />
+              <circle cx={1} cy={3} r={3} />
+            </g>
+          ))}
         </>
       )
     case 'tigros':
@@ -624,17 +674,51 @@ export function Moon() {
   )
 }
 
-const DRAGON = 'M0 10 C 8 4, 18 4, 26 8 L 34 0 L 32 9 C 40 8, 46 10, 52 6 C 48 14, 40 16, 30 15 C 24 20, 16 22, 8 20 C 4 16, 2 14, 0 10 Z M14 8 L 20 -6 L 26 7 Z'
+/**
+ * A friendly cartoon dragon facing right, about 100 × 60 units around 0,0: bat wings that flap,
+ * a curled neck, horns, a light belly, spikes on the back and a spade at the end of the tail.
+ */
+export function Dragon({ fire = false }: { fire?: boolean }) {
+  return (
+    <g className="dragon">
+      <path className="dragon-wing back" d="M30 -4 L36 -30 L60 -40 Q 55 -28 54 -22 Q 48 -26 44 -17 Q 38 -19 37 -9 Z" />
+      <path className="dragon-tail" d="M8 -3 C -2 0, -12 -4, -24 -11 C -14 -2, -2 7, 8 7 Z" />
+      <path className="dragon-spade" d="M-24 -10 L-34 -12 L-27 -20 Z" />
+      <path className="dragon-body" d="M4 2 C 8 -10, 28 -14, 44 -8 C 52 -5, 55 4, 46 9 C 32 14, 12 14, 4 2 Z" />
+      <path className="dragon-belly" d="M12 8 C 24 13, 38 12, 47 6 C 42 11, 26 14, 12 8 Z" />
+      <path className="dragon-spikes" d="M14 -7 l3 -6 l3 5 M22 -10 l3 -6 l3 5 M30 -11 l3 -6 l3 5" />
+      <path className="dragon-legs" d="M16 10 l-2 7 h5 M36 11 l1 7 h5" />
+      <path className="dragon-head" d="M42 -7 C 50 -15, 54 -22, 61 -23 L 70 -22 C 77 -21, 82 -17, 82 -13 C 78 -10, 72 -11, 67 -9 C 60 -5, 54 0, 48 3 Z" />
+      <path className="dragon-horn" d="M62 -23 L 57 -33 L 66 -24 Z M67 -23 L 66 -32 L 71 -23 Z" />
+      <circle className="dragon-eye" cx={71} cy={-17.5} r={2.6} />
+      <circle className="dragon-pupil" cx={71.8} cy={-17.5} r={1.2} />
+      <circle className="dragon-nostril" cx={79.5} cy={-15} r={0.9} />
+      <g className="dragon-flap">
+        <path className="dragon-wing front" d="M26 -2 L34 -32 L62 -44 Q 56 -30 55 -23 Q 47 -28 42 -18 Q 35 -20 33 -8 Z" />
+        <path className="dragon-ribs" d="M34 -32 L55 -23 M34 -32 L42 -18 M34 -32 L33 -8" />
+      </g>
+      {fire && (
+        <g className="dragon-fire">
+          <path className="fire-outer" d="M82 -13 C 92 -20, 104 -18, 114 -24 C 108 -14, 112 -8, 120 -4 C 108 -2, 98 -6, 82 -10 Z" />
+          <path className="fire-inner" d="M83 -12 C 91 -16, 99 -15, 106 -18 C 102 -12, 104 -9, 109 -7 C 101 -6, 93 -8, 83 -10 Z" />
+        </g>
+      )}
+    </g>
+  )
+}
 
 export function Dragons() {
   return (
     <g className="sky-dragons">
       <g className="sky-dragon one">
-        <path d={DRAGON} transform="translate(40 110) scale(1.1)" />
-        <path className="sky-fire" d="M40 122 q-12 -2 -18 4 q8 -1 10 3 q-8 1 -10 6 q10 -3 18 -6 Z" />
+        <g transform="translate(40 154) scale(0.8)">
+          <Dragon fire />
+        </g>
       </g>
       <g className="sky-dragon two">
-        <path d={DRAGON} transform="translate(200 150) scale(-0.8 0.8)" />
+        <g transform="translate(250 196) scale(-0.55 0.55)">
+          <Dragon />
+        </g>
       </g>
     </g>
   )

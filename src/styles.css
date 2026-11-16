@@ -3588,12 +3588,6 @@ button {
   fill: #c9e8b0;
 }
 
-.sky-dragon {
-  fill: #4fa35f;
-  stroke: #1d2a44;
-  stroke-width: 1;
-}
-
 .sky-dragon.one {
   animation: dragon-fly 26s linear infinite;
 }
@@ -3609,16 +3603,93 @@ button {
   to { transform: translate(330px, 12px); }
 }
 
-.sky-fire {
-  fill: #ff8a3c;
-  animation: fire 0.5s ease-in-out infinite alternate;
+/* The dragon: green with a golden belly, darker back wing, a front wing that flaps. */
+.dragon path,
+.dragon circle {
+  stroke: #1d2a44;
+  stroke-width: 1.1;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.dragon-body,
+.dragon-head,
+.dragon-tail {
+  fill: #5cae6b;
+}
+
+.dragon-belly,
+.dragon-horn {
+  fill: #f4d68a;
+}
+
+.dragon-wing.back,
+.dragon-spade {
+  fill: #2f7d4f;
+}
+
+.dragon-wing.front {
+  fill: #86d391;
+}
+
+.dragon .dragon-ribs {
+  fill: none;
+  stroke: #2f7d4f;
+  stroke-width: 0.9;
+}
+
+.dragon-spikes {
+  fill: #f2a33c;
+}
+
+.dragon .dragon-legs {
+  fill: none;
+  stroke-width: 2.6;
+}
+
+.dragon-eye {
+  fill: #ffffff;
+}
+
+.dragon .dragon-pupil,
+.dragon .dragon-nostril {
+  fill: #1d2a44;
+  stroke: none;
+}
+
+.dragon-flap {
   transform-box: fill-box;
-  transform-origin: right center;
+  transform-origin: 0% 100%;
+  animation: dragon-flap 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes dragon-flap {
+  from { transform: none; }
+  to { transform: scaleY(0.3) skewX(-8deg); }
+}
+
+.dragon .fire-outer,
+.dragon .fire-inner {
+  stroke: none;
+}
+
+.dragon .fire-outer {
+  fill: #ff7a2f;
+}
+
+.dragon .fire-inner {
+  fill: #ffd34d;
+}
+
+.dragon-fire {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: fire 0.45s ease-in-out infinite alternate;
 }
 
 @keyframes fire {
-  from { opacity: 0.4; transform: scaleX(0.6); }
-  to { opacity: 1; transform: scaleX(1.1); }
+  from { opacity: 0.5; transform: scale(0.55, 0.8); }
+  to { opacity: 1; transform: scale(1.05, 1.1); }
 }
 
 .sky-spiral {
@@ -3717,14 +3788,42 @@ button {
   opacity: 0.7;
 }
 
-.ld-mountains {
-  fill: #7d96b0;
+.ld-far-hills {
+  fill: var(--p-hill-1);
+  opacity: 0.55;
+}
+
+.ld-near-hills {
+  fill: var(--p-hill-2);
+  opacity: 0.6;
+}
+
+.ld-far-trees {
+  fill: var(--p-hill-3);
   opacity: 0.7;
 }
 
-.ld-mountains-snow {
-  fill: #fff8ea;
-  opacity: 0.85;
+.ld-lemons {
+  fill: #f7d84a;
+}
+
+.ld-picket {
+  fill: none;
+  stroke: #fffaf0;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.ld-bed circle {
+  fill: #ff7aa8;
+}
+
+.ld-bed.b circle {
+  fill: #ffffff;
+}
+
+.ld-bed.c circle {
+  fill: #f7d84a;
 }
 
 .ld-trunk {
@@ -3736,10 +3835,6 @@ button {
 
 .ld-tree {
   fill: #3f7d2c;
-}
-
-.ld-cypress {
-  fill: #2d5a22;
 }
 
 .ld-hedge {
@@ -3998,20 +4093,70 @@ button {
   stroke-width: 1.4;
 }
 
+.arr-casa .p-ink {
+  stroke-width: 1.4;
+}
+
+.arr-lawn {
+  fill: #7cc35a;
+}
+
+.arr-hedge {
+  fill: none;
+  stroke: #3f8a32;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
 .arr-house-wall {
-  fill: #f2c94c;
+  fill: #f7cf4f;
 }
 
 .arr-house-roof {
   fill: #d9643a;
 }
 
-.arr-house-door {
-  fill: #8e5a3c;
+.arr-chimney {
+  fill: #fffaf0;
+}
+
+.arr-shutter {
+  fill: #3d9a5b;
 }
 
 .arr-house-window {
   fill: #a8d4e6;
+}
+
+.arr-window-cross {
+  fill: none;
+  stroke: #fffaf0;
+  stroke-width: 1.4;
+}
+
+.arr-flowerbox {
+  fill: #a0603a;
+}
+
+.arr-blooms circle:nth-child(odd) {
+  fill: #ff5c7a;
+}
+
+.arr-blooms circle:nth-child(even) {
+  fill: #ffffff;
+}
+
+.arr-house-door {
+  fill: #2fa5a0;
+}
+
+.arr-knob {
+  fill: #f7d84a;
+}
+
+.arr-step,
+.arr-deck {
+  fill: #efe3cf;
 }
 
 .arr-pool {
@@ -4022,8 +4167,45 @@ button {
 .arr-ladder {
   fill: none;
   stroke: #e6f7ff;
-  stroke-width: 1.5;
+  stroke-width: 1.3;
   stroke-linecap: round;
+}
+
+.arr-ladder {
+  stroke: #9aa7b8;
+}
+
+.arr-float {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2.6;
+}
+
+.arr-float-stripes {
+  fill: none;
+  stroke: #e8463c;
+  stroke-width: 2.6;
+  stroke-dasharray: 3 3;
+}
+
+.arr-umbrella-pole {
+  fill: none;
+  stroke: #6b4a2b;
+  stroke-width: 1.6;
+}
+
+.arr-umbrella {
+  fill: #e8463c;
+}
+
+.arr-umbrella-stripes {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 3;
+}
+
+.arr-mat {
+  fill: #e8463c;
 }
 
 .arr-dog-fur {
@@ -4031,24 +4213,35 @@ button {
 }
 
 .arr-dog-ear {
-  fill: #c9ced6;
+  fill: #e3d6c4;
 }
 
 .arr-dog-eye {
   fill: #1d2a44;
 }
 
+.arr-collar {
+  fill: none;
+  stroke: #e8463c;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.arr-bowl {
+  fill: #3b8fd6;
+}
+
 .arr-dog-legs,
 .arr-dog-tail {
   fill: none;
   stroke: #1d2a44;
-  stroke-width: 2;
+  stroke-width: 1.8;
   stroke-linecap: round;
 }
 
 .arr-dog-tail {
   stroke: #ffffff;
-  stroke-width: 3;
+  stroke-width: 2.6;
   transform-box: fill-box;
   transform-origin: bottom left;
   animation: wag 0.5s ease-in-out infinite alternate;
@@ -4364,30 +4557,22 @@ button {
   to { stroke-dashoffset: -90; opacity: 0; }
 }
 
-.wd-dragon {
-  fill: #5cbf6e;
-  stroke: #1d2a44;
-  stroke-width: 1.2;
-}
-
 .wd-dragon.one {
   animation: wd-dragon-in 2.4s var(--ease-out) both;
 }
 
 .wd-dragon.two {
-  animation: wd-dragon-in 2.4s var(--ease-out) 0.5s both reverse;
+  animation: wd-dragon-in-right 2.4s var(--ease-out) 0.5s both;
 }
 
 @keyframes wd-dragon-in {
-  from { transform: translateX(-120px); }
+  from { transform: translate(-160px, 30px); }
   to { transform: none; }
 }
 
-.wd-fire {
-  fill: #ff8a3c;
-  animation: fire 0.4s ease-in-out infinite alternate;
-  transform-box: fill-box;
-  transform-origin: right center;
+@keyframes wd-dragon-in-right {
+  from { transform: translate(140px, -20px); }
+  to { transform: none; }
 }
 
 .wd-wonder {
@@ -4697,6 +4882,8 @@ button {
   .wobble-2,
   .wobble-3,
   .sky-dragon,
+  .dragon-flap,
+  .dragon-fire,
   .sky-card,
   .sky-skulls text,
   .p-smoke circle,

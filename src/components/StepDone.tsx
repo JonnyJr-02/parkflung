@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { sfx } from '../game/sound'
 import type { SkyId, WorldInfo } from '../game/worlds'
-import { SKY_FEATURES } from './Art'
+import { Dragon, SKY_FEATURES } from './Art'
 import { prefersReducedMotion, startShow } from './Finale'
 import { CLOUD_PATH } from './Weather'
 
 /** Rainbow colours, outside in. */
 const RAINBOW = ['#e8463c', '#f08c3c', '#f2c230', '#5ab552', '#3b8fd6', '#6a4fc4']
-
-const DRAGON = 'M0 10 C 8 4, 18 4, 26 8 L 34 0 L 32 9 C 40 8, 46 10, 52 6 C 48 14, 40 16, 30 15 C 24 20, 16 22, 8 20 C 4 16, 2 14, 0 10 Z M14 8 L 20 -6 L 26 7 Z'
 
 /** The picture in the middle, by the sky the walker just walked into. */
 function Centerpiece({ sky, icon }: { sky: SkyId; icon: string }) {
@@ -111,11 +109,14 @@ function Centerpiece({ sky, icon }: { sky: SkyId; icon: string }) {
       return (
         <svg className="wd-art wd-dragons" viewBox="0 0 240 140" aria-hidden="true">
           <g className="wd-dragon one">
-            <path d={DRAGON} transform="translate(30 50) scale(1.8)" />
-            <path className="wd-fire" d="M32 70 q-22 -4 -30 6 q12 -1 16 5 q-12 2 -16 9 q18 -5 30 -10 Z" />
+            <g transform="translate(46 78) scale(1.25)">
+              <Dragon fire />
+            </g>
           </g>
           <g className="wd-dragon two">
-            <path d={DRAGON} transform="translate(220 96) scale(-1.2 1.2)" />
+            <g transform="translate(214 122) scale(-0.62 0.62)">
+              <Dragon />
+            </g>
           </g>
         </svg>
       )

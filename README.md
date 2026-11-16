@@ -13,7 +13,8 @@ al traguardo del mondo. App per telefono (PWA), in italiano.
   2. **Tigros** (750): dal temporale al sole, poi la notte. L'omino va sul carrello con la bottiglia
      verde; il traguardo è il supermercato. Un imprevisto a 375.
   3. **Casa di Ale** (1000): dal temporale al sole di mezzogiorno. Costume e gonfiabile; il traguardo
-     è la casa gialla con la piscina e il cane bianco. Imprevisti a 250 e a 750 (obbligatorio).
+     è la casa gialla con le persiane verdi, la piscina davanti e il cane bianco sul tappetino, tra colline
+     e alberi di limoni. Imprevisti a 250 e a 750 (obbligatorio).
   4. **Varigotti** (1250): il gioco originale, dal temporale al tramonto, fino alla casa di Ale a
      Varigotti. Imprevisti a 250 e a 750 (obbligatorio).
   5. **Decanter** (1500): di notte; step Sobri, Sbrillo, Birillo, Ubriachi, 💀. Boccale in mano; il
