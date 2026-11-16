@@ -71,6 +71,10 @@ al traguardo del mondo. App per telefono (PWA), in italiano.
   da, Ideato da, Graphic design, Music design: Claude; Assolutamente nessun merito: Jo, Chri, Ale,
   Tina, Sara, Roma, Colo, Vale, Nico). Non si possono saltare: il pulsante per tornare all'inizio
   arriva solo alla fine, dopo «Fine»: in tutto circa 30 secondi. In sviluppo `?titoli` li mostra subito.
+- **Telefoni alti:** nel cammino a tutto schermo la scena si allunga invece di tagliarsi ai lati: il
+  cielo resta alto come sempre e sale, la terra e il sentiero si allungano fino in fondo allo schermo
+  (le curve diventano più alte), alberi, lampioni, partenza e traguardo restano della loro misura e si
+  spostano con il terreno. Nella Home i pulsanti dei mondi restano sempre in fondo allo schermo.
 - **Solo tema chiaro**, anche quando il telefono è in modalità scura.
 - **Nuove domande:** Impostazioni → «Carica domande da file» (JSON o testo, c'è un file di esempio).
 

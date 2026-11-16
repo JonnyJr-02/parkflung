@@ -384,3 +384,20 @@ describe('the five worlds', () => {
     }
   })
 })
+
+describe('tall screens', () => {
+  it('stretch the land under the horizon and keep the bottom', async () => {
+    const { stretchMap, mapPath, HORIZON } = await import('../components/stretch')
+    const map = stretchMap(200)
+    expect(map(500)).toBe(500)
+    expect(map(100)).toBe(-100)
+    expect(map(HORIZON)).toBe(HORIZON - 200)
+    expect(map(375)).toBeCloseTo((HORIZON - 200 + 500) / 2)
+    expect(mapPath('M0 238 C 70 214, 150 246, 230 228 L375 500 L0 500 Z', map)).toBe('M 0 38 C 70 14 150 46 230 28 L 375 500 L 0 500 Z')
+    expect(mapPath('M10 300 V500 H20', stretchMap(0))).toBe('M 10 300 V 500 H 20')
+    const { movePieces } = await import('../components/stretch')
+    // Two rows of stripes move apart with the ground; a fence of close pieces stays whole.
+    expect(movePieces('M150 300 l-6 18 M110 420 l-8 22', map)).toBe('M150 154.4 l-6 18 M110 373.6 l-8 22')
+    expect(movePieces('M120 304 h60 M124 306 v-12', map)).toBeNull()
+  })
+})

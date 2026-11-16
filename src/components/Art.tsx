@@ -4,6 +4,7 @@
  */
 import type { CSSProperties } from 'react'
 import type { SkyId, WalkerKind, WorldId } from '../game/worlds'
+import { mapPath, type MapY } from './stretch'
 
 export function Palm({ x, y, s, flip = false }: { x: number; y: number; s: number; flip?: boolean }) {
   return (
@@ -453,13 +454,20 @@ function ParkedCar({ x, y, color, flip = false }: { x: number; y: number; color:
 }
 
 /** Hills and the ground of the trail: the same shapes in every world, coloured by sky and land. */
-function Ground() {
+const HILLS = [
+  'M0 238 C 70 214, 150 246, 230 228 C 290 214, 340 228, 375 220 L375 500 L0 500 Z',
+  'M0 300 C 90 276, 200 312, 375 286 L375 500 L0 500 Z',
+  'M0 362 C 100 340, 230 376, 375 352 L375 500 L0 500 Z',
+  'M0 446 C 120 430, 250 458, 375 438 L375 500 L0 500 Z',
+]
+const HEAD = 'M196 214 C 230 186, 280 176, 330 172 C 352 170, 368 172, 375 171 L375 500 L196 500 Z'
+
+function Ground({ mapY }: { mapY?: MapY }) {
   return (
     <>
-      <path className="p-hill-1" d="M0 238 C 70 214, 150 246, 230 228 C 290 214, 340 228, 375 220 L375 500 L0 500 Z" />
-      <path className="p-hill-2" d="M0 300 C 90 276, 200 312, 375 286 L375 500 L0 500 Z" />
-      <path className="p-hill-3" d="M0 362 C 100 340, 230 376, 375 352 L375 500 L0 500 Z" />
-      <path className="p-hill-4" d="M0 446 C 120 430, 250 458, 375 438 L375 500 L0 500 Z" />
+      {HILLS.map((d, n) => (
+        <path key={n} className={`p-hill-${n + 1}`} d={mapY ? mapPath(d, mapY) : d} />
+      ))}
     </>
   )
 }
@@ -647,16 +655,12 @@ export function Lights({ world }: { world: WorldId }) {
 // ---------- Night skies ----------
 
 /** Many little stars, twinkling (full poster units). */
-/** A starry sky; `high` adds the stars above the poster, for tall screens. */
-export function Stars({ high = false }: { high?: boolean }) {
-  const low = [
+export function Stars() {
+  const stars = [
     [16, 20], [52, 48], [90, 14], [128, 36], [160, 70], [206, 18], [238, 54], [270, 26], [312, 10], [356, 40],
     [30, 96], [74, 120], [118, 88], [184, 110], [226, 92], [262, 130], [340, 92], [10, 150], [150, 150], [200, 160],
     [300, 150], [360, 136], [96, 170], [250, 176],
   ]
-  const stars = high
-    ? [...low, ...low.map(([x, y]) => [(x! + 40) % 375, y! - 190]), ...low.map(([x, y]) => [(x! + 110) % 375, y! - 380])]
-    : low
   return (
     <g className="sky-stars">
       {stars.map(([x, y], n) => (
@@ -814,18 +818,41 @@ export const SKY_FEATURES: Record<
 }
 
 /** The landscape group of a world, under the sky: far away, ground, trail, props and start. */
-export function Landscape({ world, trail, wonderland }: { world: WorldId; trail: string; wonderland: boolean }) {
+/**
+ * The land of a world. On a tall screen (`lift` above 0) the far landscape moves up, the hills and
+ * the trail stretch down to the bottom, and the things in the `data-tall` groups are moved onto the
+ * stretched ground by the scene (stretch.ts).
+ */
+export function Landscape({
+  world,
+  trail,
+  wonderland,
+  lift = 0,
+  mapY,
+}: {
+  world: WorldId
+  trail: string
+  wonderland: boolean
+  lift?: number
+  mapY?: MapY
+}) {
   return (
     <>
-      <Far world={world} />
-      <path className="p-head" d="M196 214 C 230 186, 280 176, 330 172 C 352 170, 368 172, 375 171 L375 500 L196 500 Z" />
-      <Ground />
+      <g transform={lift ? `translate(0 ${-lift})` : undefined}>
+        <Far world={world} />
+      </g>
+      <path className="p-head" d={mapY ? mapPath(HEAD, mapY) : HEAD} />
+      <Ground mapY={mapY} />
       <path className="p-trail-edge" d={trail} />
       <path className="p-trail" d={trail} />
       <path className="p-trail-dash" d={trail} />
-      <Props world={world} />
-      {wonderland && <Mushrooms />}
-      <Start world={world} />
+      <g data-tall="">
+        <Props world={world} />
+      </g>
+      <g data-tall="">{wonderland && <Mushrooms />}</g>
+      <g data-tall="">
+        <Start world={world} />
+      </g>
     </>
   )
 }
