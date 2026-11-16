@@ -14,8 +14,11 @@ export const CREDITS: ReadonlyArray<{ role: string; name: string }> = [
 /** And who did not. */
 export const NO_MERIT: readonly string[] = ['Jo', 'Chri', 'Ale', 'Tina', 'Sara', 'Roma', 'Colo', 'Vale', 'Nico']
 
-/** How long the big title stays before the credits start rolling. */
-const TITLE_MS = 4800
+/**
+ * How long the big title stays before the credits start rolling. With the roll (styles.css,
+ * .credits-roll: 0.4 s + 24 s) and the wait for the button, the whole end lasts about 30 seconds.
+ */
+const TITLE_MS = 4000
 
 type Phase = 'title' | 'roll' | 'end'
 

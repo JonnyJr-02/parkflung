@@ -5012,7 +5012,7 @@ button {
   mask-image: linear-gradient(180deg, transparent 0%, #000 14%, #000 86%, transparent 100%);
 }
 
-/* Slowly, like at the cinema: from under the screen until it is gone over the top. */
+/* Like at the cinema: from under the screen until it is gone over the top. */
 .credits-roll {
   position: absolute;
   top: 100%;
@@ -5023,7 +5023,7 @@ button {
   align-items: center;
   gap: 64px;
   padding: 0 24px;
-  animation: credits-roll 52s linear 400ms both;
+  animation: credits-roll 24s linear 400ms both;
 }
 
 @keyframes credits-roll {
