@@ -54,13 +54,17 @@ const HIGH_STARS: ReadonlyArray<[number, number]> = [
 ]
 
 /**
- * How many units of sky to add above the poster so that its whole width fits the box: on a tall,
- * narrow phone the poster would otherwise be cut on both sides (the start and the arrival).
+ * The room to add around the poster so that its whole width fits the box: on a tall, narrow phone
+ * the poster would otherwise be cut on both sides (the start and the arrival). The room goes first
+ * under the poster, as more meadow, as far as `clear` pixels (a panel over the bottom of the box),
+ * so the poster rises above that panel; whatever is left becomes sky on top.
  */
-function skyAbove(width: number, height: number): number {
-  if (width <= 0 || height <= 0) return 0
+function roomAround(width: number, height: number, clear: number): { above: number; below: number } {
+  if (width <= 0 || height <= 0) return { above: 0, below: 0 }
   const extra = (W * height) / width - H
-  return extra > 1 ? Math.ceil(extra) : 0
+  if (extra <= 1) return { above: 0, below: 0 }
+  const below = Math.min(extra, Math.max(0, (clear * W) / width))
+  return { above: Math.ceil(extra - below), below: Math.ceil(below) }
 }
 
 /** Milliseconds for one step: the legs (styles.css, .walking) swing at the same pace. */
@@ -81,6 +85,8 @@ export interface SceneProps {
   target: number
   /** Milliseconds to walk 100 points. */
   msPer100?: number
+  /** Pixels at the bottom of the box covered by a panel: on a tall screen the poster stays above them. */
+  clearBottom?: number
   /** The "?" squares: at how many points, and whether each was already met. */
   spots?: ReadonlyArray<{ at: number; used: boolean }>
   walker: WalkerKind
@@ -98,6 +104,7 @@ export function Scene({
   target,
   msPer100 = 900,
   spots = [],
+  clearBottom = 0,
   walker,
   label,
   className,
@@ -106,7 +113,10 @@ export function Scene({
 }: SceneProps) {
   const stopPoints = stopsFor(target)
   const rootRef = useRef<HTMLDivElement>(null)
-  const [extra, setExtra] = useState(0)
+  const [room, setRoom] = useState({ above: 0, below: 0 })
+  const extra = room.above + room.below
+  const clearRef = useRef(clearBottom)
+  clearRef.current = clearBottom
   const targetRef = useRef(target)
   targetRef.current = target
   const pathRef = useRef<SVGPathElement>(null)
@@ -174,14 +184,17 @@ export function Scene({
   useLayoutEffect(() => {
     const node = rootRef.current
     if (!node) return
-    const measure = () => setExtra(skyAbove(node.clientWidth, node.clientHeight))
+    const measure = () => {
+      const next = roomAround(node.clientWidth, node.clientHeight, clearRef.current)
+      setRoom((now) => (now.above === next.above && now.below === next.below ? now : next))
+    }
     measure()
     if (typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(measure)
     observer.observe(node)
     return () => observer.disconnect()
-  }, [])
-  const viewBox = `0 ${-extra} ${W} ${H + extra}`
+  }, [clearBottom])
+  const viewBox = `0 ${-room.above} ${W} ${H + extra}`
 
   // On the first draw, and when the wheel moves the arrival: the walker takes his place on the trail.
   useLayoutEffect(() => {
@@ -235,15 +248,15 @@ export function Scene({
               <rect x="0" y={154 + OFFSET} width={W} height="6" />
             </clipPath>
           </defs>
-          <rect y={-extra} width={W} height={240 + OFFSET + extra} fill={`url(#p-sky-${uid})`} />
+          <rect y={-room.above} width={W} height={240 + OFFSET + room.above} fill={`url(#p-sky-${uid})`} />
           <g className="p-stars">
-            {[[24, 40], [80, 22], [140, 60], [196, 30], [300, 48], [350, 20], [40, 120], [330, 110], [110, 150], [260, 90], ...(extra ? HIGH_STARS : [])].map(
+            {[[24, 40], [80, 22], [140, 60], [196, 30], [300, 48], [350, 20], [40, 120], [330, 110], [110, 150], [260, 90], ...(room.above ? HIGH_STARS.filter(([, y]) => y > -room.above) : [])].map(
               ([x, y]) => (
                 <circle key={`${x}-${y}`} cx={x} cy={y} r={1.4} />
               ),
             )}
           </g>
-          {features.stars && <Stars high={extra > 0} />}
+          {features.stars && <Stars high={room.above > 0} />}
           {features.moon && <Moon />}
           {sky === 'noon' ? (
             <g className="p-noon-sun">
@@ -259,7 +272,7 @@ export function Scene({
           )}
           {features.clouds !== null && (
             <g className="p-clouds" key={sky}>
-              {[...SKY_CLOUDS[features.clouds]!, ...(extra ? HIGH_CLOUDS[features.clouds]! : [])].map(([x, y, scale], n) => (
+              {[...SKY_CLOUDS[features.clouds]!, ...(room.above ? HIGH_CLOUDS[features.clouds]!.filter(([, y]) => y > -room.above + 20) : [])].map(([x, y, scale], n) => (
                 <g key={n} transform={`translate(${x} ${y + OFFSET - 32 * scale}) scale(${scale})`}>
                   <path className="p-cloud" d={CLOUD_PATH} style={{ animationDelay: `-${n * 3}s` }} />
                 </g>
@@ -276,8 +289,10 @@ export function Scene({
           {features.skulls && <Skulls />}
           <g transform={`translate(0 ${OFFSET})`}>
             <Landscape world={world} trail={TRAIL} wonderland={features.wonderland} />
+            {/* More meadow under the poster on a tall screen, where the panel goes. */}
+            {room.below > 0 && <rect className="p-hill-4" y={H - OFFSET - 1} width={W} height={room.below + 2} />}
             {/* Night darkens the land; lamps, windows and the arrival glow above it. */}
-            <rect className="p-veil" y={-OFFSET - extra} width={W} height={H + extra} />
+            <rect className="p-veil" y={-OFFSET - room.above} width={W} height={H + extra} />
             <Lights world={world} />
             <Arrival world={world} />
           </g>
