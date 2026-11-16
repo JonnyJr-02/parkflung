@@ -3,14 +3,15 @@ import { Finale } from './components/Finale'
 import { Game, scoreOf, type Result } from './components/Game'
 import { GameOver } from './components/GameOver'
 import { Home, Settings, Summary } from './components/Screens'
+import { StepDone } from './components/StepDone'
 import { SurpriseSquare } from './components/Surprise'
-import { WorldDone } from './components/WorldDone'
 import { mergeBank, pickNext } from './game/bank'
 import type { Question } from './game/parse'
-import { getState, recordGame, saveGame, useSavedState, type SavedGame, type SavedResult } from './game/store'
 import { playTune } from './game/sound'
-import { rulesFor, type Surprise } from './game/surprise'
-import { DEFAULT_TARGET, maxQuestions, OUTCOMES, TIER_INFO, type Target } from './game/tiers'
+import { getState, markReached, recordGame, saveGame, update, useSavedState, type SavedGame, type SavedResult } from './game/store'
+import { rulesFor, WHEELS, type Met } from './game/surprise'
+import { maxQuestions, OUTCOMES, TIER_INFO } from './game/tiers'
+import { isWorldId, nextWorld, worldInfo, WORLDS, type WheelKind, type WorldId, type WorldInfo } from './game/worlds'
 
 type View =
   | { name: 'home' }
@@ -18,19 +19,21 @@ type View =
   | {
       name: 'game'
       id: number
-      target: Target
+      world: WorldId
       hardcore: boolean
       timer: number
-      start: { results: Result[]; question: Question; surprise?: Surprise; retried?: string; swapped: Question[] }
+      start: { results: Result[]; question: Question; met: Met; retried?: string; swapped: Question[] }
     }
-  /** The end of a game, then the summary: the arrival at the house of Ale, or the questions run out. */
-  /** `target` is the points the house was at in the end, after the wheel of fortune. */
-  | { name: 'finale'; results: Result[]; target: number; hardcore: boolean }
-  | { name: 'summary'; results: Result[]; target: number; hardcore: boolean }
-  /** Development only: one world-completed show on its own. */
-  | { name: 'world'; world: number }
-  /** Development only: the "?" square and its wheel on their own. */
-  | { name: 'surprise' }
+  /**
+   * The end of a game, then the summary: the arrival, or the questions run out. `target` is the
+   * points the arrival was at in the end, after the wheels; `unlocked` the world it opened.
+   */
+  | { name: 'finale'; world: WorldId; results: Result[]; target: number; hardcore: boolean; unlocked?: WorldId }
+  | { name: 'summary'; world: WorldId; results: Result[]; target: number; hardcore: boolean }
+  /** Development only: one step show on its own. */
+  | { name: 'step'; world: WorldId; step: number }
+  /** Development only: a wheel on its own. */
+  | { name: 'wheel'; wheel: WheelKind; forced: boolean }
 
 function toSaved(result: Result): SavedResult {
   return {
@@ -41,38 +44,35 @@ function toSaved(result: Result): SavedResult {
     answer: result.answer?.label,
     timedOut: result.timedOut,
     retried: result.retried,
+    double: result.double,
   }
 }
 
 /**
- * In development, `?finale` opens the arrival with a made-up game, `?finale=230` the end of a game
- * that ran out of questions at about that score, and `?mondo=0` to `?mondo=3` the show of that
- * world completed, to try them quickly.
+ * In development, to try the shows quickly: `?finale=decanter` (the arrival), `?finale=tigros-230`
+ * (questions run out at about 230 points), `?step=parcheggio-4` (the show of a step),
+ * `?ruota=malus-diamond` (a wheel; `?ruota=classic` can be skipped) and `?sblocca` (all worlds open).
  */
 function firstView(): View {
   if (!import.meta.env.DEV) return { name: 'home' }
   const params = new URLSearchParams(location.search)
-  const world = Number(params.get('mondo'))
-  if (params.has('mondo') && world >= 0 && world <= 3) return { name: 'world', world }
-  if (params.has('imprevisto')) return { name: 'surprise' }
-  if (!params.has('finale')) return { name: 'home' }
-  const wanted = Number(params.get('finale'))
-  if (wanted > 0 && wanted < DEFAULT_TARGET) {
-    // As many questions as allowed, each worth the most that still fits under the wanted score.
-    let left = wanted
-    const results: Result[] = Array.from({ length: maxQuestions(DEFAULT_TARGET) }, (_, i) => {
-      const outcome = [...OUTCOMES].reverse().find((tier) => TIER_INFO[tier].points <= left) ?? 'miss'
-      left -= TIER_INFO[outcome].points
-      return { question: { id: `prova-${i}`, prompt: `Domanda di prova ${i + 1}`, answers: [] }, typed: 'prova', outcome }
-    })
-    return { name: 'finale', results, target: DEFAULT_TARGET, hardcore: true }
-  }
-  const results: Result[] = Array.from({ length: 7 }, (_, i) => ({
-    question: { id: `prova-${i}`, prompt: `Domanda di prova ${i + 1}`, answers: [] },
-    typed: '',
-    outcome: i % 2 ? 't' : 'e',
-  }))
-  return { name: 'finale', results, target: DEFAULT_TARGET, hardcore: true }
+  if (params.has('sblocca')) update((current) => ({ ...current, reached: WORLDS.map((world) => world.id) }))
+  const [stepWorld, stepIndex] = (params.get('step') ?? '').split('-')
+  if (isWorldId(stepWorld)) return { name: 'step', world: stepWorld, step: Math.max(1, Math.min(4, Number(stepIndex) || 1)) }
+  const wheel = params.get('ruota')
+  if (wheel && wheel in WHEELS) return { name: 'wheel', wheel: wheel as WheelKind, forced: wheel !== 'classic' }
+  const [finaleWorld, wantedText] = (params.get('finale') ?? '').split('-')
+  if (!isWorldId(finaleWorld)) return { name: 'home' }
+  const target = worldInfo(finaleWorld).target
+  const wanted = Number(wantedText)
+  // As many questions as allowed, each worth the most that still fits under the wanted score.
+  let left = wanted > 0 && wanted < target ? wanted : target
+  const results: Result[] = Array.from({ length: maxQuestions(target) }, (_, i) => {
+    const outcome = [...OUTCOMES].reverse().find((tier) => TIER_INFO[tier].points <= left) ?? 'miss'
+    left -= TIER_INFO[outcome].points
+    return { question: { id: `prova-${i}`, prompt: `Domanda di prova ${i + 1}`, answers: [] }, typed: 'prova', outcome }
+  })
+  return { name: 'finale', world: finaleWorld, results, target, hardcore: true, unlocked: nextWorld(finaleWorld)?.id }
 }
 
 export function App() {
@@ -81,10 +81,11 @@ export function App() {
   const byId = useMemo(() => new Map(bank.map((question) => [question.id, question])), [bank])
   const [view, setView] = useState<View>(firstView)
 
-  // The home tune plays on the calm screens; the game has the sounds of its worlds instead.
+  // One tune per world: in the game the world played, elsewhere the world shown on the home screen.
+  const tune: WorldId = 'world' in view ? view.world : saved.world
   useEffect(() => {
-    playTune(view.name === 'home' || view.name === 'settings' || view.name === 'summary' ? 'home' : null)
-  }, [view.name])
+    playTune(tune)
+  }, [tune])
 
   function toResult(result: SavedResult): Result {
     const question = byId.get(result.id) ?? { id: result.id, prompt: result.prompt, answers: [] }
@@ -95,6 +96,7 @@ export function App() {
       answer: question.answers.find((answer) => answer.label === result.answer),
       timedOut: result.timedOut,
       retried: result.retried,
+      double: result.double,
     }
   }
 
@@ -106,13 +108,14 @@ export function App() {
 
   function open(game: SavedGame) {
     const { timerOn, timerSeconds } = getState()
+    const info = worldInfo(game.world)
     const results = game.results.map(toResult)
-    // Games saved before the mode existed had misses: they go on as hardcore.
-    const hardcore = game.hardcore ?? true
+    const hardcore = game.hardcore === true
+    const met = game.met ?? {}
     // A game saved when it was already over (all its questions played) goes straight to its ending.
-    const { goal, limit } = rulesFor(game.target, game.surprise, hardcore)
+    const { goal, limit } = rulesFor(info.target, met, hardcore)
     if (results.length >= limit || scoreOf(results) >= goal) {
-      finish(game.target, results, goal, hardcore)
+      finish(game.world, results, goal, hardcore)
       return
     }
     const pending = game.pending ? byId.get(game.pending) : undefined
@@ -120,59 +123,62 @@ export function App() {
     const swapped = (game.swapped ?? []).map((id) => byId.get(id)).filter((question): question is Question => !!question)
     const question =
       pending && !answered.has(pending.id) ? pending : nextQuestion([...results.map((result) => result.question), ...swapped])
-    saveGame({ ...game, pending: question.id })
+    saveGame(game.world, { ...game, pending: question.id })
     // The Carta Rivincita used on the question on screen stays used when the game is picked up again.
     const retried = game.retried === question.id ? game.retried : undefined
     setView({
       name: 'game',
       id: Date.now(),
-      target: game.target,
+      world: game.world,
       hardcore,
       timer: timerOn ? timerSeconds : 0,
-      start: { results, question, surprise: game.surprise, retried, swapped },
+      start: { results, question, met, retried, swapped },
     })
   }
 
-  function newGame() {
-    const { target, hardcore } = getState()
-    open({ target, hardcore, startedAt: Date.now(), results: [] })
+  function newGame(world: WorldId) {
+    update((current) => ({ ...current, world }))
+    open({ world, hardcore: getState().hardcore, startedAt: Date.now(), results: [] })
   }
 
-  function play() {
-    const { current } = getState()
-    if (current) open(current)
-    else newGame()
+  function play(world: WorldId) {
+    const game = getState().playing[world]
+    if (game) open(game)
+    else newGame(world)
   }
 
-  function save(
-    target: Target,
-    hardcore: boolean,
-    results: Result[],
-    onScreen: Question | null,
-    extra: { surprise?: Surprise; retried?: string; swapped?: string[] },
-  ) {
-    saveGame({
-      target,
+  function save(world: WorldId, hardcore: boolean, results: Result[], onScreen: Question | null, extra: { met?: Met; retried?: string; swapped?: string[] }) {
+    const current = getState().playing[world]
+    saveGame(world, {
+      world,
       hardcore,
-      startedAt: getState().current?.startedAt ?? Date.now(),
+      startedAt: current?.startedAt ?? Date.now(),
       results: results.map(toSaved),
       pending: onScreen?.id,
-      surprise: extra.surprise,
+      met: extra.met ?? current?.met,
       retried: onScreen && extra.retried === onScreen.id ? extra.retried : undefined,
-      swapped: extra.swapped ?? getState().current?.swapped,
+      swapped: extra.swapped ?? current?.swapped,
     })
   }
 
-  function finish(target: Target, results: Result[], goal: number, hardcore: boolean) {
+  function finish(world: WorldId, results: Result[], goal: number, hardcore: boolean) {
+    const score = scoreOf(results)
+    const arrived = score >= goal
+    const next = nextWorld(world)
+    // The first time the arrival is reached, the next world opens.
+    const unlocked = arrived && next && !getState().reached.includes(world) ? next.id : undefined
     recordGame({
       at: Date.now(),
-      score: scoreOf(results),
+      score,
       outcomes: results.map((result) => result.outcome),
-      target,
+      target: goal,
       questions: results.length,
+      world,
+      arrived,
     })
-    saveGame(null)
-    setView({ name: 'finale', results, target: goal, hardcore })
+    if (arrived) markReached(world)
+    saveGame(world, null)
+    setView({ name: 'finale', world, results, target: goal, hardcore, unlocked })
   }
 
   switch (view.name) {
@@ -184,40 +190,39 @@ export function App() {
       return (
         <Game
           key={view.id}
-          target={view.target}
+          world={worldInfo(view.world)}
           hardcore={view.hardcore}
           timer={view.timer}
           start={view.start}
           nextQuestion={nextQuestion}
-          onSave={(results, onScreen, extra) => save(view.target, view.hardcore, results, onScreen, extra)}
-          onFinish={(results, goal) => finish(view.target, results, goal, view.hardcore)}
+          onSave={(results, onScreen, extra) => save(view.world, view.hardcore, results, onScreen, extra)}
+          onFinish={(results, goal) => finish(view.world, results, goal, view.hardcore)}
           onQuit={() => setView({ name: 'home' })}
         />
       )
-    case 'finale':
+    case 'finale': {
+      const info: WorldInfo = worldInfo(view.world)
+      const toSummary = () => setView({ name: 'summary', world: view.world, results: view.results, target: view.target, hardcore: view.hardcore })
       if (scoreOf(view.results) < view.target) {
-        return (
-          <GameOver
-            score={scoreOf(view.results)}
-            target={view.target}
-            questions={view.results.length}
-            onDone={() => setView({ name: 'summary', results: view.results, target: view.target, hardcore: view.hardcore })}
-          />
-        )
+        return <GameOver world={info} score={scoreOf(view.results)} target={view.target} questions={view.results.length} onDone={toSummary} />
       }
       return (
         <Finale
+          world={info}
           target={view.target}
           questions={view.results.length}
-          onDone={() => setView({ name: 'summary', results: view.results, target: view.target, hardcore: view.hardcore })}
+          unlocked={view.unlocked ? worldInfo(view.unlocked) : undefined}
+          onDone={toSummary}
         />
       )
-    case 'world':
-      return <WorldDone world={view.world} target={DEFAULT_TARGET} onDone={() => setView({ name: 'home' })} />
-    case 'surprise':
+    }
+    case 'step':
+      return <StepDone world={worldInfo(view.world)} step={view.step} goal={worldInfo(view.world).target} onDone={() => setView({ name: 'home' })} />
+    case 'wheel':
       return (
         <SurpriseSquare
-          target={DEFAULT_TARGET}
+          spot={{ at: 0, wheel: view.wheel, forced: view.forced }}
+          rulesWith={(prize) => rulesFor(500, { 0: prize })}
           onSkip={() => setView({ name: 'home' })}
           onPrize={() => {}}
           onDone={() => setView({ name: 'home' })}
@@ -226,10 +231,11 @@ export function App() {
     case 'summary':
       return (
         <Summary
+          world={worldInfo(view.world)}
           results={view.results}
           target={view.target}
           hardcore={view.hardcore}
-          onAgain={newGame}
+          onAgain={() => newGame(view.world)}
           onHome={() => setView({ name: 'home' })}
         />
       )

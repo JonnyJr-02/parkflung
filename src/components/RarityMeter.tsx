@@ -81,7 +81,6 @@ export function RarityMeter({
     let stopRoll = () => {}
     const finish = () => {
       stopRoll()
-      sfx.rarity(outcome)
       setTease(-1)
       setDone(true)
       buzz(outcome === 'miss' ? 60 : 30)

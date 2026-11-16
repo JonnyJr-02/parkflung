@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { builtIn, derived, family, LETTER_GROUPS, MIN_LETTER_ANSWERS, mergeBank, mergeCustom, pickNext } from './bank'
 import { editDistance, matchAnswer, stem, tokenize } from './match'
 import { compile, parseJson, parseText, parseUpload, type RawQuestion } from './parse'
-import { maxQuestions, MAX_SCORE, stopsFor, stopsReached, TIERS, worldOf, WORLDS } from './tiers'
+import { maxQuestions, stepOf, stopsFor, SWAPS, TIERS } from './tiers'
+import { isUnlocked, nextWorld, WORLDS } from './worlds'
 
 const fruit: RawQuestion = {
   q: 'Un frutto',
@@ -300,62 +301,84 @@ describe('timer', () => {
   })
 })
 
-describe('a game until the house', () => {
-  it('has four stops and five worlds on the way, at 500 or 1000 points', () => {
-    expect(MAX_SCORE).toBe(500)
+describe('the five worlds', () => {
+  it('go from the Parcheggio to the Decanter, longer and longer, five steps each', () => {
+    expect(WORLDS.map((world) => world.id)).toEqual(['parcheggio', 'tigros', 'casa', 'varigotti', 'decanter'])
+    expect(WORLDS.map((world) => world.target)).toEqual([500, 750, 1000, 1250, 1500])
+    for (const world of WORLDS) {
+      expect(world.steps).toHaveLength(5)
+      expect(world.arrival.title.length).toBeGreaterThan(0)
+    }
+    expect(WORLDS[0]!.steps.map((step) => step.name)).toEqual(['Sobri', "Un po' fatti", 'Decisamente fatti', 'Fattissimi', 'Jo sta male'])
+    expect(WORLDS[4]!.steps.map((step) => step.name)).toEqual(['Sobri', 'Sbrillo', 'Birillo', 'Ubriachi', '💀'])
+    expect(WORLDS.find((world) => world.id === 'varigotti')!.arrival.title).toContain('casa di Ale a Varigotti')
+  })
+
+  it('change step every fifth of the trail', () => {
     expect(stopsFor(500)).toEqual([100, 200, 300, 400])
-    expect(stopsFor(1000)).toEqual([200, 400, 600, 800])
-    expect([0, 99, 100, 250, 499, 500].map((score) => stopsReached(score, 500))).toEqual([0, 0, 1, 2, 4, 5])
-    expect(WORLDS).toHaveLength(5)
-    expect([0, 99, 100, 199, 200, 300, 400, 499, 500].map((score) => worldOf(score, 500))).toEqual([0, 0, 1, 1, 2, 3, 4, 4, 4])
-    expect([0, 199, 200, 600, 999].map((score) => worldOf(score, 1000))).toEqual([0, 0, 1, 3, 4])
+    expect(stopsFor(1500)).toEqual([300, 600, 900, 1200])
+    expect([0, 99, 100, 299, 300, 1199, 1200, 1500].map((score) => stepOf(score, 1500))).toEqual([0, 0, 0, 0, 1, 3, 4, 4])
   })
 
-  it('ends with the arrival at the house of Ale', async () => {
-    const { ARRIVAL_TITLE } = await import('../components/Finale')
-    expect(ARRIVAL_TITLE).toContain('casa di Ale a Varigotti')
+  it('have one question every 25 points, a quarter fewer without hardcore, and 5 swaps', () => {
+    expect(WORLDS.map((world) => maxQuestions(world.target))).toEqual([20, 30, 40, 50, 60])
+    expect(WORLDS.map((world) => maxQuestions(world.target, false))).toEqual([15, 23, 30, 38, 45])
+    expect(SWAPS).toBe(5)
   })
 
-  it('ends after 20 questions at 500 points and 40 at 1000, with an ending for each world', async () => {
-    expect(maxQuestions(500)).toBe(20)
-    expect(maxQuestions(1000)).toBe(40)
-    // Without hardcore there are no misses, and a quarter fewer questions.
-    expect(maxQuestions(500, false)).toBe(15)
-    const { swapsFor } = await import('./tiers')
-    expect([swapsFor(500), swapsFor(1000)]).toEqual([3, 6])
-    expect(maxQuestions(1000, false)).toBe(30)
-    const { GAME_OVER } = await import('../components/GameOver')
-    expect(GAME_OVER).toHaveLength(WORLDS.length)
+  it('open one after the other', () => {
+    expect(WORLDS.map((world) => isUnlocked(world.id, []))).toEqual([true, false, false, false, false])
+    expect(isUnlocked('tigros', ['parcheggio'])).toBe(true)
+    expect(isUnlocked('casa', ['parcheggio'])).toBe(false)
+    expect(nextWorld('parcheggio')?.id).toBe('tigros')
+    expect(nextWorld('decanter')).toBeUndefined()
   })
 
-  it('puts the "?" square halfway, and its wheel changes the house, the questions or gives the card', async () => {
-    const { halfway, PRIZES, rulesFor, spinPrize } = await import('./surprise')
-    expect([halfway(500), halfway(1000)]).toEqual([250, 500])
-    expect(rulesFor(500)).toEqual({ goal: 500, limit: 20, card: false })
-    expect(rulesFor(500, { prize: null })).toEqual({ goal: 500, limit: 20, card: false })
-    expect(rulesFor(500, { prize: 'goal-up' }).goal).toBe(600)
-    expect(rulesFor(500, { prize: 'goal-down' }).goal).toBe(400)
-    expect(rulesFor(1000, { prize: 'questions-up' }).limit).toBe(43)
-    expect(rulesFor(1000, { prize: 'questions-down' }).limit).toBe(37)
-    expect(rulesFor(500, { prize: 'card' }).card).toBe(true)
-    expect(rulesFor(500, { prize: 'questions-up' }, false).limit).toBe(18)
-    expect(rulesFor(1000, undefined, false)).toEqual({ goal: 1000, limit: 30, card: false })
-    const { ladderFor } = await import('./tiers')
-    expect(ladderFor(true)[0]).toBe('miss')
-    expect(ladderFor(false)).toEqual(['c', 'n', 'r', 'e', 't'])
-    expect(PRIZES.map((prize) => prize.kind).sort()).toEqual(['bonus', 'bonus', 'gold', 'malus', 'malus'])
+  it('put their "?" squares where asked, the later ones not to be skipped', () => {
+    const spots = Object.fromEntries(WORLDS.map((world) => [world.id, world.spots.map((spot) => `${spot.at}:${spot.wheel}:${spot.forced}`)]))
+    expect(spots).toEqual({
+      parcheggio: ['250:classic:false'],
+      tigros: ['375:classic:false'],
+      casa: ['250:classic:false', '750:malus:true'],
+      varigotti: ['250:classic:false', '750:malus:true'],
+      decanter: ['500:malus-gold:true', '1000:malus-diamond:true'],
+    })
+  })
+
+  it('spin wheels that move the arrival, change the questions or give a card', async () => {
+    const { PRIZE_INFO, rulesFor, spinPrize, WHEELS } = await import('./surprise')
+    const kinds = (wheel: keyof typeof WHEELS) => WHEELS[wheel].map((prize) => PRIZE_INFO[prize].kind).sort()
+    expect(kinds('classic')).toEqual(['bonus', 'bonus', 'gold', 'malus', 'malus'])
+    expect(kinds('malus')).toEqual(['malus', 'malus', 'malus', 'malus'])
+    expect(kinds('malus-gold')).toEqual(['gold', 'malus', 'malus', 'malus', 'malus'])
+    expect(kinds('malus-diamond')).toEqual(['diamond', 'malus', 'malus', 'malus', 'malus'])
+    expect(rulesFor(500)).toEqual({ goal: 500, limit: 20, card: false, diamond: false })
+    expect(rulesFor(500, { 0: null })).toEqual({ goal: 500, limit: 20, card: false, diamond: false })
+    expect(rulesFor(1000, { 0: 'goal-down', 1: 'goal-up-200' }).goal).toBe(1100)
+    expect(rulesFor(1500, { 0: 'questions-down-5', 1: 'questions-down' }, false).limit).toBe(37)
+    expect(rulesFor(1500, { 0: 'card', 1: 'diamond' })).toMatchObject({ card: true, diamond: true })
     // Each slice is as likely as the others.
     const counts = new Map<string, number>()
     for (let i = 0; i < 1000; i++) {
-      const prize = spinPrize(() => i / 1000)
+      const prize = spinPrize('malus', () => i / 1000)
       counts.set(prize, (counts.get(prize) ?? 0) + 1)
     }
-    expect([...counts.values()]).toEqual([200, 200, 200, 200, 200])
+    expect([...counts.values()]).toEqual([250, 250, 250, 250])
   })
 
-  it('has its own show for each world left behind before the house', async () => {
-    const { WORLD_DONE } = await import('../components/WorldDone')
-    expect(WORLD_DONE).toHaveLength(WORLDS.length - 1)
-    expect(new Set(WORLD_DONE.map((done) => done.title)).size).toBe(WORLD_DONE.length)
+  it('count double points with the Carta Diamante', async () => {
+    const { pointsOf, scoreOf } = await import('../components/Game')
+    expect(pointsOf({ outcome: 'r' })).toBe(50)
+    expect(pointsOf({ outcome: 'r', double: true })).toBe(100)
+    expect(scoreOf([{ outcome: 't' }, { outcome: 'c', double: true }, { outcome: 'miss', double: true }])).toBe(120)
+  })
+
+  it('have a tune each', async () => {
+    const { TUNES } = await import('./sound')
+    for (const world of WORLDS) {
+      const tune = TUNES[world.id]
+      const beats = tune.melody.reduce((sum, [, length]) => sum + length, 0)
+      expect(beats).toBe(tune.roots.length * tune.beatsPerBar)
+    }
   })
 })

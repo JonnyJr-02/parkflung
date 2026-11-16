@@ -22,58 +22,29 @@ export const TIER_INFO: Record<Outcome, TierInfo> = {
   t: { label: 'Marco B.', rarity: 'Farflung', points: 100 },
 }
 
-/** Points needed to reach the house of Ale: chosen in Impostazioni. */
-export const TARGETS = [500, 1000] as const
-export type Target = (typeof TARGETS)[number]
-export const DEFAULT_TARGET: Target = 500
-export const MAX_SCORE: Target = DEFAULT_TARGET
-
-export function isTarget(value: unknown): value is Target {
-  return TARGETS.includes(value as Target)
-}
-
 /**
- * Questions in a game at most: in hardcore 20 to reach 500 points and 40 for 1000; without
- * hardcore (no misses) a quarter fewer, 15 and 30. After the last one the game ends, house or not.
+ * Questions in a game at most, in proportion to the points of the world: one every 25 points in
+ * hardcore (20 for 500 points … 60 for 1500), a quarter fewer without hardcore (15 … 45). After the
+ * last one the game ends, arrival or not.
  */
 export function maxQuestions(target: number, hardcore = true): number {
   return Math.round((target / 25) * (hardcore ? 1 : 0.75))
 }
 
-/** Times a question can be swapped for another in a game: 3 to reach 500 points, 6 for 1000. */
-export function swapsFor(target: number): number {
-  return Math.round((target / 500) * 3)
-}
+/** «Cambia domanda»: the same in every world. */
+export const SWAPS = 5
 
 /** The rarities a game can end on, from the bottom of the meter: without hardcore there is no miss. */
 export function ladderFor(hardcore: boolean): readonly Outcome[] {
   return hardcore ? OUTCOMES : OUTCOMES.filter((outcome) => outcome !== 'miss')
 }
 
-/** Four stops between the cart and the house, one every fifth of the way: 100…400, or 200…800. */
+/** Four stops along the trail, one every fifth of the way: where the steps of a world change. */
 export function stopsFor(target: number): number[] {
   return [1, 2, 3, 4].map((k) => (target * k) / 5)
 }
 
-/** Kept for the 500-point trail drawn on the home poster. */
-export const STOPS: readonly number[] = stopsFor(DEFAULT_TARGET)
-
-/** How many stops a score has reached: 0 at the cart, 5 at the house. */
-export function stopsReached(score: number, target: number = DEFAULT_TARGET): number {
-  if (score >= target) return 5
-  return stopsFor(target).filter((stop) => score >= stop).length
-}
-
-/** The weather along the trail: a world for each fifth of the way, from the storm to the sunset. */
-export const WORLDS = [
-  { name: 'Temporale', icon: '⛈️', note: 'pioggia e fulmini' },
-  { name: 'Pioggerella', icon: '🌧️', note: 'pioviggina' },
-  { name: 'Nuvole e sole', icon: '⛅', note: "un po' nuvoloso, ma spunta il sole" },
-  { name: 'Sole', icon: '☀️', note: 'cielo sereno' },
-  { name: 'Tramonto', icon: '🌅', note: 'un tramonto bellissimo sul mare' },
-] as const
-
-/** Which world a score is in: 0 (storm) … 4 (sunset). The house itself is reached at the target. */
-export function worldOf(score: number, target: number = DEFAULT_TARGET): number {
-  return Math.max(0, Math.min(4, Math.floor(score / (target / 5))))
+/** Which of the five steps of a world a score is in: 0 … 4. The arrival itself is reached at the goal. */
+export function stepOf(score: number, goal: number): number {
+  return Math.max(0, Math.min(4, Math.floor(score / (goal / 5))))
 }

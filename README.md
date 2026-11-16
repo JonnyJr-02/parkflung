@@ -1,45 +1,40 @@
 # ParkFlung
 
-Una domanda dopo l'altra: più la tua risposta è rara, più strada fai lungo il sentiero, dal carro
-di legno fino alla casa di Ale a Varigotti. La partita finisce solo quando ci arrivi. App per telefono
-(PWA), in italiano.
+Una domanda dopo l'altra: più la tua risposta è rara, più strada fa l'omino lungo il sentiero, fino
+al traguardo del mondo. App per telefono (PWA), in italiano.
 
-- **Partita fino alla casa:** a 500 o a 1000 punti, si sceglie nella Home. La partita si salva a ogni
-  risposta: si può uscire e continuarla dopo, anche chiudendo l'app.
-- **Modalità hardcore (spenta di default):** in Impostazioni, sopra il timer. Senza hardcore non esiste
-  «morto di CACCA ADDOSSO !»: una risposta che non è tra quelle valide fa riprovare, se si passa o finisce
-  il tempo la domanda vale 0 punti, il termometro parte da «bada che storia» e la Carta Rivincita
-  fa riprovare dopo «bada che storia». Per questo le domande sono il 25% in meno (15 a 500 punti, 30 a
-  1000). Con hardcore il gioco è quello di sempre. La modalità si fissa all'inizio di ogni partita.
-- **Suoni:** tutti generati dal codice (Web Audio), senza file da scaricare. Effetti: rullo e gradini
-  del termometro, «sale» o «ricade», un suono per ogni fascia (trombone triste per «morto di CACCA
-  ADDOSSO !», fanfara per Marco B.), passi dell'omino, campanelli dei mondi e delle tappe, ruota che
-  scatta e rallenta, carta, cambio domanda, risposta che non c'è, ultimi secondi del timer, fuochi
-  d'artificio. Musica e ambienti: musichetta nella Home, pioggia e tuoni, pioggerella, vento,
-  uccellini, onde e gabbiani a seconda del mondo. In Impostazioni si spengono separatamente
-  «Effetti sonori» e «Musica e ambienti». Partono dopo il primo tocco e si fermano con l'app in
-  secondo piano.
-- **Cambia domanda:** nell'angolo in basso a destra un cerchio con le frecce viola e i cambi rimasti
-  (per esempio 2/3): 3 cambi a partita a 500 punti, 6 a 1000. La domanda cambiata non ritorna nella
-  stessa partita e non conta tra le domande.
-- **Domande contate:** in hardcore al massimo 20 domande a 500 punti, 40 a 1000. Se finiscono prima della casa,
-  parte un'animazione a schermo intero: l'omino cammina fino a dove si è fermato, nel meteo del suo
-  mondo, con una festa che cresce col mondo raggiunto (pioggia nel temporale, fuochi al tramonto).
-  Poi il riepilogo, dove sotto ogni domanda si aprono tutte le risposte possibili. In sviluppo
-  `?finale=230` la mostra subito.
-- **Casella imprevisti «?»:** esattamente a metà sentiero (250 o 500 punti). Quando l'omino ci arriva
-  si sceglie a schermo intero: continuare senza imprevisto o girare la ruota della fortuna. La ruota ha
-  cinque spicchi, tutti con la stessa probabilità: +100 punti al traguardo e −3 domande (malus, rossi),
-  +3 domande e −100 punti al traguardo (bonus, blu) e la Carta Rivincita (oro): per tutta la partita,
-  dopo un «morto di CACCA ADDOSSO !» si può rispondere di nuovo alla stessa domanda, una volta per
-  domanda. In sviluppo `?imprevisto` mostra subito la scelta e la ruota.
-- **Cinque mondi:** il meteo cambia ogni quinto di sentiero (100 o 200 punti): temporale con i fulmini,
-  pioggerella, nuvole e sole, sole, tramonto. Si vede nella camminata a schermo intero e nel riepilogo
-  punti dopo ogni risposta.
-- **Camminata:** tutto il sentiero resta in vista (niente zoom) e il tratto già fatto si colora.
-- **Mondo completato:** ogni volta che si passa al mondo dopo parte un'animazione a schermo intero,
-  sempre più ricca: il temporale che se ne va, l'arcobaleno, il sole che sfonda le nuvole, il tramonto
-  sul mare con i fuochi d'artificio. In sviluppo `?mondo=0` … `?mondo=3` le mostra subito.
+- **Cinque mondi**, uno dopo l'altro: nella Home si scorrono a destra e a sinistra. All'inizio è aperto
+  solo il primo; arrivando al traguardo di un mondo si sblocca il successivo, e quelli già sbloccati
+  restano sempre giocabili. «Azzera i progressi» li richiude. Ogni mondo ha la sua partita salvata,
+  il suo paesaggio, il suo omino, il suo traguardo e la sua musica.
+  1. **Parcheggio** (500 punti): di notte; step Sobri, Un po' fatti (luna), Decisamente fatti
+     (stelle), Fattissimi (draghi), Jo sta male (paese delle meraviglie). L'omino fuma; il traguardo
+     è la macchina col bagagliaio aperto. Un imprevisto a 250.
+  2. **Tigros** (750): dal temporale al sole, poi la notte. L'omino va sul carrello con la bottiglia
+     verde; il traguardo è il supermercato. Un imprevisto a 375.
+  3. **Casa di Ale** (1000): dal temporale al sole di mezzogiorno. Costume e gonfiabile; il traguardo
+     è la casa gialla con la piscina e il cane bianco. Imprevisti a 250 e a 750 (obbligatorio).
+  4. **Varigotti** (1250): il gioco originale, dal temporale al tramonto, fino alla casa di Ale a
+     Varigotti. Imprevisti a 250 e a 750 (obbligatorio).
+  5. **Decanter** (1500): di notte; step Sobri, Sbrillo, Birillo, Ubriachi, 💀. Boccale in mano; il
+     traguardo è il pub rosso e giallo con le tende rosse. Imprevisti obbligatori a 500 e a 1000.
+- **Step:** ogni mondo ne ha 5, uno ogni quinto di sentiero, con il cielo che cambia. Entrando in uno
+  step nuovo parte un'animazione a schermo intero con un suono. Negli step «fatti» la scena ondeggia.
+- **Domande:** una ogni 25 punti (20, 30, 40, 50, 60 dal Parcheggio al Decanter), il 25% in meno senza
+  hardcore. 5 «cambia domanda» a partita in ogni mondo. Se finiscono le domande prima del traguardo,
+  un'animazione mostra dove si è fermato l'omino, poi il riepilogo con tutte le risposte.
+- **Imprevisti «?»:** ruota della fortuna con spicchi della stessa probabilità. Classica (si può
+  saltare): +100 punti al traguardo e −3 domande (malus), +3 domande e −100 punti (bonus), Carta
+  Rivincita. Obbligatoria: 4 malus (+100, +200 al traguardo, −3, −5 domande); al Decanter con la
+  Carta Rivincita o con la Carta Diamante (punti doppi per il resto della partita).
+- **Modalità hardcore (spenta di default):** in Impostazioni. Senza hardcore non esiste «morto di
+  CACCA ADDOSSO !»: una risposta che non è tra quelle valide fa riprovare, se si passa o finisce il tempo
+  la domanda vale 0 punti e la Carta Rivincita fa riprovare dopo «bada che storia».
+- **Suoni:** generati dal codice (Web Audio). Una musica diversa per ogni mondo, in tutto il gioco; nella
+  Home cambia mentre si scorrono i mondi. Effetti solo per il termometro e per lo sblocco di step e
+  mondi. In Impostazioni si spengono «Musica» ed «Effetti sonori».
+- **In sviluppo:** `?sblocca` apre tutti i mondi, `?step=parcheggio-4` mostra l'animazione di uno step,
+  `?ruota=malus-diamond` una ruota, `?finale=decanter` l'arrivo e `?finale=tigros-230` le domande finite.
 
 - **Fasce di rarità:** morto di CACCA ADDOSSO ! (0), bada che storia (10), parata col petto (25),
   Shave like a Bomber! (50), Jonny 🍆 (75), Marco B. (100).

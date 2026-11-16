@@ -1,5 +1,4 @@
 import { useEffect, useRef, type CSSProperties } from 'react'
-import { sfx } from '../game/sound'
 import { TIER_INFO } from '../game/tiers'
 
 const LEAVES = Array.from({ length: 26 }, (_, i) => ({
@@ -16,7 +15,6 @@ export function Farflung({ answer, onDone }: { answer: string; onDone: () => voi
   const buttonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    sfx.fanfare()
     buttonRef.current?.focus()
     try {
       navigator.vibrate?.([70, 50, 70, 50, 180])

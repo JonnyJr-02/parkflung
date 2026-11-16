@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from 'react'
 import { builtIn, countFresh, derived, mergeCustom } from '../game/bank'
 import { parseUpload, type Question } from '../game/parse'
 import { TIMER_CHOICES, timerLabel } from '../game/timer'
 import { update, useSavedState } from '../game/store'
-import { halfway, prizeInfo, rulesFor } from '../game/surprise'
-import { ladderFor, maxQuestions, TARGETS, TIER_INFO, TIERS, worldOf, WORLDS } from '../game/tiers'
-import type { Result } from './Game'
+import { rulesFor } from '../game/surprise'
+import { ladderFor, maxQuestions, stepOf, SWAPS, TIER_INFO, TIERS } from '../game/tiers'
+import { isUnlocked, WORLDS, type WorldId, type WorldInfo } from '../game/worlds'
+import { scoreOf, type Result } from './Game'
 import { Scene } from './Scene'
 
 function GearIcon() {
@@ -26,81 +27,93 @@ function homeNote(total: number, fresh: number, repeat: boolean): string {
   return `Hai giocato tutte le ${total} domande: ora ricapitano, a partire da quelle viste da più tempo.`
 }
 
-export function Home({
-  bank,
+const PLAY_LABEL: Record<WorldId, string> = {
+  parcheggio: 'Gioca al Parcheggio',
+  tigros: 'Gioca al Tigros',
+  casa: 'Gioca alla Casa di Ale',
+  varigotti: 'Gioca a Varigotti',
+  decanter: 'Gioca al Decanter',
+}
+
+/** The step shown on the home poster of a world with no game in progress: its most typical sky. */
+const COVER_STEP: Record<WorldId, number> = { parcheggio: 3, tigros: 3, casa: 4, varigotti: 4, decanter: 3 }
+
+function WorldCard({
+  world,
+  index,
+  hardcore,
+  canStart,
   onPlay,
   onNewGame,
   onSettings,
 }: {
-  bank: Question[]
+  world: WorldInfo
+  index: number
+  hardcore: boolean
+  canStart: boolean
   onPlay: () => void
   onNewGame: () => void
   onSettings: () => void
 }) {
   const saved = useSavedState()
-  const game = saved.current
-  const target = game?.target ?? saved.target
-  const fresh = countFresh(bank, saved.seen)
-  const canStart = saved.repeat || fresh > 0
-  const gameScore = game ? game.results.reduce((sum, result) => sum + TIER_INFO[result.outcome].points, 0) : 0
-  const hardcore = game ? (game.hardcore ?? true) : saved.hardcore
-  const rules = rulesFor(target, game?.surprise, hardcore)
-  const world = game ? worldOf(gameScore, rules.goal) : 4
-  const prize = game?.surprise?.prize
+  const game = saved.playing[world.id]
+  const locked = !isUnlocked(world.id, saved.reached)
+  const reached = saved.reached.includes(world.id)
+  const gameHardcore = game ? game.hardcore === true : hardcore
+  const rules = rulesFor(world.target, game?.met, gameHardcore)
+  const score = game ? scoreOf(game.results) : 0
+  const step = game ? stepOf(score, rules.goal) : COVER_STEP[world.id]
+  const stepInfo = world.steps[step]!
+  const previous = WORLDS[index - 1]
   const [confirmNew, setConfirmNew] = useState(false)
 
   return (
-    <main className="screen home">
+    <section className={locked ? 'world-card locked' : 'world-card'} aria-label={`Mondo ${index + 1} di 5: ${world.name}${locked ? ', bloccato' : ''}`}>
       <Scene
-        className="hero"
-        points={gameScore}
+        className="hero world-hero"
+        world={world.id}
+        sky={stepInfo.sky}
+        wobble={game ? stepInfo.wobble : 0}
+        walker={world.walker}
+        points={score}
         target={rules.goal}
-        world={world}
-        surprise={game ? { at: halfway(target), used: !!game.surprise } : undefined}
-        label="Un manifesto della riviera: un sentiero parte da un carro di legno e arriva alla casa di Ale a Varigotti, sul mare"
+        spots={world.spots.map((spot, n) => ({ at: spot.at, used: game?.met?.[n] !== undefined }))}
+        label={`${world.name}: ${world.tagline}`}
       >
-        <button type="button" className="icon-button hero-settings" onClick={onSettings} aria-label="Impostazioni">
-          <GearIcon />
-        </button>
+        {locked && (
+          <span className="world-lock" aria-hidden="true">
+            🔒
+          </span>
+        )}
       </Scene>
-      <div className="home-body">
-        <h1 className="title">
-          Park<em>Flung</em>
-        </h1>
-        <p className="lede">
-          Una domanda dopo l'altra: più la risposta è rara, più strada fai. Arrivi alla casa di Ale&nbsp;a&nbsp;Varigotti a{' '}
-          {target}&nbsp;punti, se ce la fai in {rules.limit}&nbsp;domande.
-          {hardcore ? ' Modalità hardcore.' : ''}
+      <div className="world-info">
+        <p className="world-number">Mondo {index + 1} di 5</p>
+        <h2 className="world-name">
+          <span aria-hidden="true">{world.icon}</span> {world.name}
+        </h2>
+        <p className="world-tagline">{world.tagline}</p>
+        <p className="world-facts">
+          {world.target} punti · {maxQuestions(world.target, hardcore)} domande · {world.spots.length}{' '}
+          {world.spots.length === 1 ? 'imprevisto' : 'imprevisti'} · {SWAPS} cambi
         </p>
-        <div className="target-choice">
-          <p className="target-label" id="target-label">
-            {game ? 'Prossima partita: casa di Ale a' : 'Casa di Ale a'}
+        <p className="world-steps" aria-label={`Step: ${world.steps.map((item) => item.name).join(', ')}`}>
+          {world.steps.map((item) => (
+            <span key={item.name} title={item.name}>
+              {item.icon}
+            </span>
+          ))}
+          <span title="Traguardo">🏁</span>
+        </p>
+        {locked ? (
+          <p className="world-locked">
+            🔒 Arriva {previous?.arrival.to} (mondo {index}) per sbloccarlo.
           </p>
-          <div className="segmented two" role="radiogroup" aria-labelledby="target-label">
-            {TARGETS.map((points) => (
-              <button
-                key={points}
-                type="button"
-                role="radio"
-                aria-checked={saved.target === points}
-                className={saved.target === points ? 'on' : ''}
-                onClick={() => update((current) => ({ ...current, target: points }))}
-              >
-                {points} punti
-              </button>
-            ))}
-          </div>
-          <p className="note">
-            Al massimo {maxQuestions(saved.target, saved.hardcore)} domande{saved.hardcore ? ' (hardcore)' : ''}. Cinque mondi lungo il sentiero, uno ogni {saved.target / 5} punti: temporale,
-            pioggerella, nuvole e sole, sole e tramonto.
-          </p>
-        </div>
-        {game ? (
+        ) : game ? (
           <>
             <p className="current-game">
-              <span aria-hidden="true">{WORLDS[world]!.icon}</span> Partita in corso: <strong>{gameScore}</strong> su {rules.goal} punti
-              · domande {Math.min(game.results.length, rules.limit)} di {rules.limit} · {WORLDS[world]!.name}
-              {prize && <> · imprevisto: {prizeInfo(prize).title}</>}
+              <span aria-hidden="true">{stepInfo.icon}</span> Partita in corso: <strong>{score}</strong> su {rules.goal} punti · domande{' '}
+              {Math.min(game.results.length, rules.limit)} di {rules.limit} · {stepInfo.name}
+              {gameHardcore ? ' · hardcore' : ''}
             </p>
             <button type="button" className="btn" onClick={onPlay}>
               Continua la partita
@@ -117,15 +130,112 @@ export function Home({
           </>
         ) : canStart ? (
           <button type="button" className="btn" onClick={onNewGame}>
-            Gioca
+            {PLAY_LABEL[world.id]}
           </button>
         ) : (
           <button type="button" className="btn" onClick={onSettings}>
             Apri le impostazioni
           </button>
         )}
-        <p className="note">{homeNote(bank.length, fresh, saved.repeat)}</p>
+        {reached && <p className="world-reached">🏁 Traguardo già raggiunto</p>}
       </div>
+    </section>
+  )
+}
+
+/**
+ * The home screen: the five worlds side by side, to swipe left and right. A world opens once the
+ * arrival of the one before is reached; each keeps its own game in progress.
+ */
+export function Home({
+  bank,
+  onPlay,
+  onNewGame,
+  onSettings,
+}: {
+  bank: Question[]
+  onPlay: (world: WorldId) => void
+  onNewGame: (world: WorldId) => void
+  onSettings: () => void
+}) {
+  const saved = useSavedState()
+  const fresh = countFresh(bank, saved.seen)
+  const canStart = saved.repeat || fresh > 0
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const shown = Math.max(0, WORLDS.findIndex((world) => world.id === saved.world))
+
+  // Open on the world shown last time.
+  useLayoutEffect(() => {
+    const scroller = scrollerRef.current
+    if (scroller) scroller.scrollLeft = shown * scroller.clientWidth
+  }, [])
+
+  function onScroll() {
+    const scroller = scrollerRef.current
+    if (!scroller) return
+    const index = Math.round(scroller.scrollLeft / Math.max(1, scroller.clientWidth))
+    const world = WORLDS[Math.max(0, Math.min(WORLDS.length - 1, index))]!
+    if (world.id !== saved.world) update((current) => ({ ...current, world: world.id }))
+  }
+
+  function go(index: number) {
+    const scroller = scrollerRef.current
+    if (!scroller) return
+    const target = Math.max(0, Math.min(WORLDS.length - 1, index))
+    scroller.scrollTo({ left: target * scroller.clientWidth, behavior: 'smooth' })
+  }
+
+  return (
+    <main className="screen home worlds-home">
+      <header className="home-top">
+        <h1 className="title">
+          Park<em>Flung</em>
+        </h1>
+        <button type="button" className="icon-button" onClick={onSettings} aria-label="Impostazioni">
+          <GearIcon />
+        </button>
+      </header>
+      <div className="worlds" ref={scrollerRef} onScroll={onScroll}>
+        {WORLDS.map((world, index) => (
+          <WorldCard
+            key={world.id}
+            world={world}
+            index={index}
+            hardcore={saved.hardcore}
+            canStart={canStart}
+            onPlay={() => onPlay(world.id)}
+            onNewGame={() => onNewGame(world.id)}
+            onSettings={onSettings}
+          />
+        ))}
+      </div>
+      <nav className="world-nav" aria-label="Scegli il mondo">
+        <button type="button" className="world-arrow" onClick={() => go(shown - 1)} disabled={shown === 0} aria-label="Mondo precedente">
+          ‹
+        </button>
+        {WORLDS.map((world, index) => (
+          <button
+            key={world.id}
+            type="button"
+            className={index === shown ? 'world-dot on' : 'world-dot'}
+            onClick={() => go(index)}
+            aria-label={world.name}
+            aria-current={index === shown}
+          >
+            {isUnlocked(world.id, saved.reached) ? world.icon : '🔒'}
+          </button>
+        ))}
+        <button
+          type="button"
+          className="world-arrow"
+          onClick={() => go(shown + 1)}
+          disabled={shown === WORLDS.length - 1}
+          aria-label="Mondo successivo"
+        >
+          ›
+        </button>
+      </nav>
+      <p className="note home-note">{homeNote(bank.length, fresh, saved.repeat)}</p>
     </main>
   )
 }
@@ -195,21 +305,23 @@ function ResultCard({ result, number, hardcore }: { result: Result; number: numb
 }
 
 export function Summary({
+  world: info,
   results,
   target,
   hardcore,
   onAgain,
   onHome,
 }: {
+  world: WorldInfo
   results: Result[]
   target: number
   hardcore: boolean
   onAgain: () => void
   onHome: () => void
 }) {
-  const score = Math.min(target, results.reduce((sum, result) => sum + TIER_INFO[result.outcome].points, 0))
+  const score = Math.min(target, scoreOf(results))
   const arrived = score >= target
-  const world = arrived ? 4 : worldOf(score, target)
+  const step = info.steps[stepOf(score, target)]!
   // Start at the cart, then walk: the scene animates whenever its points change.
   const [walked, setWalked] = useState(0)
   useEffect(() => {
@@ -221,11 +333,13 @@ export function Summary({
     <main className="screen summary">
       <Scene
         className="hero hero-tall"
+        world={info.id}
+        sky={step.sky}
+        walker={info.walker}
         points={walked}
         target={target}
-        world={world}
         msPer100={650 * (500 / target)}
-        label={arrived ? `L'omino è arrivato alla casa di Ale: ${score} punti su ${target}` : `L'omino si è fermato a ${score} punti su ${target}`}
+        label={arrived ? `${info.arrival.title} ${score} punti su ${target}` : `L'omino si è fermato a ${score} punti su ${target}`}
       />
       <div className="home-body">
         <p className="total">
@@ -233,8 +347,8 @@ export function Summary({
         </p>
         <h1 className="destination">
           {arrived
-            ? `Sei arrivato alla casa di Ale a Varigotti in ${results.length} ${results.length === 1 ? 'domanda' : 'domande'}!`
-            : `Domande finite: ti sei fermato nel mondo ${WORLDS[world]!.icon} ${WORLDS[world]!.name}, a ${target - score} punti dalla casa di Ale.`}
+            ? `${info.arrival.title.replace(/!$/, '')} in ${results.length} ${results.length === 1 ? 'domanda' : 'domande'}!`
+            : `Domande finite: ti sei fermato allo step ${step.icon} ${step.name}, a ${target - score} punti ${info.arrival.to}.`}
         </h1>
         <p className="note">Sotto ogni domanda puoi aprire tutte le sue risposte possibili, fascia per fascia.</p>
         <ol className="results">
@@ -332,9 +446,9 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
             <span className="switch-title">Modalità hardcore</span>
             <span className="note">
               {saved.hardcore
-                ? `Attiva: c'è anche «${TIER_INFO.miss.label}» (0 punti), si può passare la domanda e una risposta che non è tra quelle valide vale 0 punti. Partita a 500 punti in ${maxQuestions(500, true)} domande, a 1000 punti in ${maxQuestions(1000, true)}.`
-                : `Spenta: non c'è «${TIER_INFO.miss.label}». Se scrivi una risposta che non è tra quelle valide te lo dico e riprovi finché ne trovi una giusta. Se passi, o se finisce il tempo, quella domanda vale 0 punti. Per questo le domande sono il 25% in meno: ${maxQuestions(500, false)} invece di ${maxQuestions(500, true)} a 500 punti, ${maxQuestions(1000, false)} invece di ${maxQuestions(1000, true)} a 1000 punti.`}
-              {saved.current ? ' Vale dalla prossima partita.' : ''}
+                ? `Attiva: c'è anche «${TIER_INFO.miss.label}» (0 punti), si può passare la domanda e una risposta che non è tra quelle valide vale 0 punti. Una domanda ogni 25 punti: ${WORLDS.map((world) => maxQuestions(world.target, true)).join(', ')} domande, dal Parcheggio al Decanter.`
+                : `Spenta: non c'è «${TIER_INFO.miss.label}». Se scrivi una risposta che non è tra quelle valide te lo dico e riprovi finché ne trovi una giusta. Se passi, o se finisce il tempo, quella domanda vale 0 punti. Per questo le domande sono il 25% in meno: ${WORLDS.map((world) => maxQuestions(world.target, false)).join(', ')} invece di ${WORLDS.map((world) => maxQuestions(world.target, true)).join(', ')}, dal Parcheggio al Decanter.`}
+              {Object.keys(saved.playing).length > 0 ? ' Vale per le partite che inizi da adesso.' : ''}
             </span>
           </span>
           <input
@@ -399,8 +513,8 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
             <span className="switch-title">Effetti sonori</span>
             <span className="note">
               {saved.soundOn
-                ? "Il termometro che sale, le fasce, i passi dell'omino, la ruota della fortuna, i fuochi d'artificio."
-                : 'Spenti: il gioco non fa nessun effetto sonoro.'}
+                ? 'Il termometro che sale e un suono quando si sblocca uno step o un nuovo mondo.'
+                : 'Spenti: niente termometro e niente suono di sblocco.'}
             </span>
           </span>
           <input
@@ -417,17 +531,17 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
         </label>
         <label className="switch-row">
           <span className="switch-text">
-            <span className="switch-title">Musica e ambienti</span>
+            <span className="switch-title">Musica</span>
             <span className="note">
               {saved.musicOn
-                ? 'La musichetta nella Home e i suoni dei mondi: pioggia e tuoni, vento, uccellini, onde e gabbiani.'
-                : 'Spenti: niente musica e niente suoni dei mondi.'}
+                ? 'Una musica diversa per ogni mondo: nella Home cambia mentre scorri i mondi.'
+                : 'Spenta: niente musica.'}
             </span>
           </span>
           <input
             type="checkbox"
             role="switch"
-            aria-label="Musica e ambienti"
+            aria-label="Musica"
             className="switch"
             checked={saved.musicOn}
             onChange={(event) => {
@@ -525,20 +639,23 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
           ))}
         </ul>
         <p className="note">
-          Ogni risposta fa avanzare l'omino dei suoi punti, fino alla casa di Ale a {saved.target} punti. C'è una tappa, e un
-          mondo nuovo, ogni {saved.target / 5} punti.
+          Ogni risposta fa avanzare l'omino dei suoi punti, fino al traguardo del mondo. Ogni mondo ha 5 step: se ne cambia
+          ogni quinto di sentiero. Con la Carta Diamante i punti sono doppi.
         </p>
       </section>
 
       <section className="panel">
         <h2>Progressi</h2>
-        <p>Azzera partite, record, la partita in corso e l'elenco delle domande già giocate. Le domande caricate restano.</p>
+        <p>
+          Azzera partite, record, le partite in corso, i mondi sbloccati e l'elenco delle domande già giocate. Le domande caricate
+          restano.
+        </p>
         {confirming === 'reset' ? (
           <button
             type="button"
             className="btn danger"
             onClick={() => {
-              update((current) => ({ ...current, seen: {}, games: [], current: null }))
+              update((current) => ({ ...current, seen: {}, games: [], playing: {}, reached: [], world: WORLDS[0]!.id }))
               setConfirming(null)
             }}
           >

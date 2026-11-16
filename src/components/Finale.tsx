@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState, type CSSProperties } from 'react'
-import { WORLDS } from '../game/tiers'
 import { sfx } from '../game/sound'
-import { Walker } from './Scene'
+import type { WorldInfo } from '../game/worlds'
+import { Arrival, Walker } from './Art'
 
 /**
  * How big the party is at each ending: the more stops, the more confetti and balloons; fireworks
@@ -127,7 +127,6 @@ export function startShow(canvas: HTMLCanvasElement, level: number): () => void 
       if (sinceRocket >= show.fireworksEveryMs) {
         sinceRocket = 0
         rockets.push({ x: w * (0.15 + Math.random() * 0.7), y: h, vy: 9 + Math.random() * 3, top: h * (0.12 + Math.random() * 0.3), color: pick(COLORS) })
-        sfx.rocket()
       }
     }
     for (let i = rockets.length - 1; i >= 0; i--) {
@@ -137,7 +136,6 @@ export function startShow(canvas: HTMLCanvasElement, level: number): () => void 
       ctx.fillRect(r.x - 1.5, r.y, 3, 10)
       if (r.y <= r.top) {
         rockets.splice(i, 1)
-        sfx.bang()
         const count = level === 5 ? 70 : 46
         const second = level === 5 && Math.random() < 0.5 ? pick(COLORS) : r.color
         for (let s = 0; s < count; s++) {
@@ -219,13 +217,37 @@ function House() {
   )
 }
 
-export const ARRIVAL_TITLE = 'Sei arrivato alla casa di Ale a Varigotti!'
+/** The arrival of a world, big: Varigotti keeps its house with the door opening; the others their own. */
+function ArrivalPicture({ world }: { world: WorldInfo }) {
+  if (world.id === 'varigotti') return <House />
+  return (
+    <svg className="finale-house" viewBox="232 90 140 104" aria-hidden="true">
+      <Arrival world={world.id} />
+      <g className={`p-walker walker-${world.walker} finale-walker`} transform="translate(246 186) scale(1.25)">
+        <Walker kind={world.walker} />
+      </g>
+    </svg>
+  )
+}
 
 /**
- * Full-screen arrival at the house of Ale, the end of a game: night sky, fireworks, confetti,
- * balloons, the house with lit windows and the walker waving his frond. Then the summary.
+ * Full-screen arrival at the end of a world: fireworks, confetti, balloons, the arrival and the
+ * walker. The first time, it tells which world it unlocked. Then the summary.
  */
-export function Finale({ target, questions, onDone }: { target: number; questions: number; onDone: () => void }) {
+export function Finale({
+  world,
+  target,
+  questions,
+  unlocked,
+  onDone,
+}: {
+  world: WorldInfo
+  target: number
+  questions: number
+  /** The world this arrival opened, the first time it was reached. */
+  unlocked?: WorldInfo
+  onDone: () => void
+}) {
   const level = 5
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -240,6 +262,7 @@ export function Finale({ target, questions, onDone }: { target: number; question
 
   // The score counts up, then the button appears.
   useEffect(() => {
+    sfx.unlock(true)
     if (prefersReducedMotion()) {
       setShown(target)
       setReady(true)
@@ -254,7 +277,6 @@ export function Finale({ target, questions, onDone }: { target: number; question
       if (t < 1) frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
-    sfx.house()
     const timer = window.setTimeout(() => setReady(true), 3800)
     try {
       navigator.vibrate?.([80, 60, 80, 60, 80, 60, 260])
@@ -271,34 +293,40 @@ export function Finale({ target, questions, onDone }: { target: number; question
     if (ready) buttonRef.current?.focus({ preventScroll: true })
   }, [ready])
 
+  const title = world.arrival.title
   const note = `${target} punti in ${questions} ${questions === 1 ? 'domanda' : 'domande'}`
-  const marks = [...WORLDS.map((world) => world.icon), '⌂']
+  const marks = [...world.steps.map((step) => step.icon), '🏁']
   return (
-    <div className={`finale level-${level}`} role="dialog" aria-modal="true" aria-label={`${ARRIVAL_TITLE} ${note}`}>
+    <div className={`finale level-${level} arrive-${world.id}`} role="dialog" aria-modal="true" aria-label={`${title} ${note}`}>
       <div className="finale-rays" aria-hidden="true" />
       <canvas ref={canvasRef} className="finale-canvas" aria-hidden="true" />
       <div className="finale-center">
-        <House />
-        <p className="finale-kicker">Traguardo</p>
+        <ArrivalPicture world={world} />
+        <p className="finale-kicker">Traguardo · {world.name}</p>
         <p className="finale-score">
           <strong>{shown}</strong>
           <small>/{target}</small>
         </p>
         <ol className="finale-stops" aria-hidden="true">
           {marks.map((mark, index) => (
-            <li key={mark} className={index === marks.length - 1 ? 'reached house' : 'reached'} style={{ '--i': index } as CSSProperties}>
+            <li key={`${mark}-${index}`} className={index === marks.length - 1 ? 'reached house' : 'reached'} style={{ '--i': index } as CSSProperties}>
               {mark}
             </li>
           ))}
         </ol>
         <h1 className="finale-title">
-          {ARRIVAL_TITLE.split(' ').map((word, index) => (
+          {title.split(' ').map((word, index) => (
             <Fragment key={index}>
               <span style={{ '--i': index } as CSSProperties}>{word}</span>{' '}
             </Fragment>
           ))}
         </h1>
         <p className="finale-note">{note}</p>
+        {unlocked && (
+          <p className="finale-unlock">
+            🔓 Hai sbloccato un nuovo mondo: {unlocked.icon} {unlocked.name}!
+          </p>
+        )}
       </div>
       <button ref={buttonRef} type="button" className={ready ? 'finale-button show' : 'finale-button'} onClick={onDone} tabIndex={ready ? 0 : -1}>
         Vedi il riepilogo

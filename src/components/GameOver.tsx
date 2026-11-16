@@ -1,36 +1,34 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { worldOf, WORLDS } from '../game/tiers'
+import { stepOf } from '../game/tiers'
+import type { WorldInfo } from '../game/worlds'
+import { SKY_FEATURES } from './Art'
 import { prefersReducedMotion, startShow } from './Finale'
-import { sfx } from '../game/sound'
 import { Scene } from './Scene'
 
-/** What the ending says, by the world where the walker stopped: 0 is the storm, 4 the sunset. */
-export const GAME_OVER: ReadonlyArray<{ title: string; note: string }> = [
-  { title: 'Fermo nel temporale!', note: "L'omino si ripara sotto la pioggia: la casa di Ale è ancora lontana." },
-  { title: 'Fermo sotto la pioggerella!', note: 'Il peggio è passato, ma la strada è ancora lunga.' },
-  { title: 'Fermo tra nuvole e sole!', note: 'Metà strada fatta: il sole comincia a uscire.' },
-  { title: 'Fermo sotto il sole!', note: 'Che bella giornata: la casa di Ale si vede già.' },
-  { title: 'A un passo dalla casa di Ale!', note: 'Il tramonto sul mare, la casa lì davanti: per poco!' },
-]
+/** What the ending says, by how far the walker got: the first step … the last. */
+export const GAME_OVER: readonly string[] = ['Ancora lontano', 'Un bel pezzo di strada', 'A metà strada', 'Il traguardo si vede', 'A un passo dal traguardo']
 
 /**
- * Full screen, when the questions run out before the house: the walker walks to where he stopped,
- * in the weather of that world, and the party grows with it, from rain in the storm to fireworks at
- * the sunset. Then the summary.
+ * Full screen, when the questions run out before the arrival: the walker walks to where he stopped,
+ * under the sky of that step, and the party grows with the steps. Then the summary.
  */
 export function GameOver({
+  world: info,
   score,
   target,
   questions,
   onDone,
 }: {
+  world: WorldInfo
   score: number
   target: number
   questions: number
   onDone: () => void
 }) {
-  const world = worldOf(score, target)
-  const { title, note } = GAME_OVER[world]!
+  const world = stepOf(score, target)
+  const step = info.steps[world]!
+  const title = `${GAME_OVER[world]!}!`
+  const dark = SKY_FEATURES[step.sky].night || step.sky === 'storm' || step.sky === 'drizzle' || step.sky === 'sunset'
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [shown, setShown] = useState(0)
@@ -42,10 +40,6 @@ export function GameOver({
     if (!canvas || prefersReducedMotion()) return
     // Rain in the storm, then more confetti, balloons and, at the sunset, fireworks.
     return startShow(canvas, world)
-  }, [world])
-
-  useEffect(() => {
-    sfx.over(world)
   }, [world])
 
   // The walker sets off from the cart while the score counts up, then the button appears.
@@ -86,7 +80,7 @@ export function GameOver({
   const missing = Math.max(0, target - score)
   return (
     <div
-      className={`finale game-over world-${world}`}
+      className={`finale game-over sky-${step.sky}${dark ? ' dark' : ''}`}
       role="dialog"
       aria-modal="true"
       aria-label={`Domande finite. ${title} ${score} punti su ${target}, mancano ${missing} punti.`}
@@ -96,9 +90,12 @@ export function GameOver({
       <div className="finale-center">
         <Scene
           className="game-over-scene"
+          world={info.id}
+          sky={step.sky}
+          wobble={step.wobble}
+          walker={info.walker}
           points={walked}
           target={target}
-          world={world}
           msPer100={1400 * (500 / target)}
           label={`L'omino si è fermato a ${score} punti su ${target}`}
         />
@@ -110,18 +107,18 @@ export function GameOver({
           <small>/{target}</small>
         </p>
         <ol className="finale-stops" aria-hidden="true">
-          {WORLDS.map((item, index) => (
+          {info.steps.map((item, index) => (
             <li key={item.name} className={index <= world ? 'reached' : ''} style={{ '--i': index } as CSSProperties}>
               {item.icon}
             </li>
           ))}
           <li className="house" style={{ '--i': 5 } as CSSProperties}>
-            ⌂
+            🏁
           </li>
         </ol>
         <h1 className="game-over-title">{title}</h1>
         <p className="finale-note">
-          {note} Mancavano {missing} punti.
+          Ti sei fermato allo step {step.icon} «{step.name}»: mancavano {missing} punti {info.arrival.to}.
         </p>
       </div>
       <button ref={buttonRef} type="button" className={ready ? 'finale-button show' : 'finale-button'} onClick={onDone} tabIndex={ready ? 0 : -1}>

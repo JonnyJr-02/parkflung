@@ -1,18 +1,23 @@
 import { useSyncExternalStore } from 'react'
 import type { RawQuestion } from './parse'
-import { isPrize, type Surprise } from './surprise'
+import { isPrize, type Met } from './surprise'
 import { DEFAULT_TIMER, isTimerSeconds, type TimerSeconds } from './timer'
-import { DEFAULT_TARGET, isTarget, type Outcome, type Target } from './tiers'
+import type { Outcome } from './tiers'
+import { isWorldId, WORLDS, type WorldId } from './worlds'
 
 export interface GameRecord {
   /** When the game ended, in milliseconds since the epoch. */
   at: number
   score: number
   outcomes: Outcome[]
-  /** Points of the house for that game; missing in the old five-question games. */
+  /** Points of the arrival for that game; missing in the old five-question games. */
   target?: number
-  /** How many questions it took to reach the house. */
+  /** How many questions it took. */
   questions?: number
+  /** The world it was played in; missing before the five worlds. */
+  world?: WorldId
+  /** The arrival was reached. */
+  arrived?: boolean
 }
 
 /** One answered question of the game in progress, small enough to keep in storage. */
@@ -26,20 +31,22 @@ export interface SavedResult {
   timedOut?: boolean
   /** Answered a second time with the Carta Rivincita. */
   retried?: boolean
+  /** Worth double points: answered with the Carta Diamante. */
+  double?: boolean
 }
 
-/** The game in progress: it goes on until the house, and comes back when the app is reopened. */
+/** A game in progress in one world: it goes on until the arrival, and comes back when the app is reopened. */
 export interface SavedGame {
-  target: Target
+  world: WorldId
   startedAt: number
   results: SavedResult[]
   /** The question on screen, so leaving and coming back does not skip it. */
   pending?: string
-  /** The "?" square halfway: missing until the walker gets there, then skipped or the wheel's prize. */
-  surprise?: Surprise
+  /** The "?" squares met so far: the wheel's prize, or null when skipped. */
+  met?: Met
   /** The question on screen already answered once more with the Carta Rivincita. */
   retried?: string
-  /** Played in hardcore mode (with misses). Missing in games saved before the mode existed: those were hardcore. */
+  /** Played in hardcore mode (with misses). */
   hardcore?: boolean
   /** Questions swapped for another with «cambia domanda»: they count against the swaps and do not come back. */
   swapped?: string[]
@@ -57,15 +64,18 @@ export interface SavedState {
   timerOn: boolean
   /** Seconds for each question, kept when the timer is switched off. */
   timerSeconds: TimerSeconds
-  /** Points to reach the house in a new game. */
-  target: Target
-  /** Hardcore mode for new games: misses, passing, and 20 or 40 questions. Off by default. */
+  /** Hardcore mode for new games: misses, and one question every 25 points. Off by default. */
   hardcore: boolean
-  /** Sound effects: the thermometer, the rarities, the walk, the wheel, the fireworks. */
+  /** Sound effects: the thermometer, and a chime when a step or a world unlocks. */
   soundOn: boolean
-  /** The tune on the home screen and the sounds of the worlds (rain, wind, birds, waves). */
+  /** The tune of the world on screen. */
   musicOn: boolean
-  current: SavedGame | null
+  /** The world shown on the home screen. */
+  world: WorldId
+  /** Worlds whose arrival was reached: each one unlocks the next. */
+  reached: WorldId[]
+  /** The game in progress in each world. */
+  playing: Partial<Record<WorldId, SavedGame>>
 }
 
 const KEY = 'parkflung:v1'
@@ -77,11 +87,12 @@ const EMPTY: SavedState = {
   repeat: true,
   timerOn: false,
   timerSeconds: DEFAULT_TIMER,
-  target: DEFAULT_TARGET,
   hardcore: false,
   soundOn: true,
   musicOn: true,
-  current: null,
+  world: WORLDS[0]!.id,
+  reached: [],
+  playing: {},
 }
 
 function read(): SavedState {
@@ -89,6 +100,14 @@ function read(): SavedState {
     const text = localStorage.getItem(KEY)
     if (!text) return EMPTY
     const data = JSON.parse(text) as Partial<SavedState>
+    const playing: Partial<Record<WorldId, SavedGame>> = {}
+    // Games saved before the five worlds (one game, no world) are left behind.
+    if (data.playing && typeof data.playing === 'object') {
+      for (const [id, value] of Object.entries(data.playing)) {
+        const game = readGame(value)
+        if (isWorldId(id) && game && game.world === id) playing[id] = game
+      }
+    }
     return {
       seen: data.seen && typeof data.seen === 'object' ? data.seen : {},
       games: Array.isArray(data.games) ? data.games : [],
@@ -96,11 +115,12 @@ function read(): SavedState {
       repeat: data.repeat !== false,
       timerOn: data.timerOn === true,
       timerSeconds: isTimerSeconds(data.timerSeconds) ? data.timerSeconds : DEFAULT_TIMER,
-      target: isTarget(data.target) ? data.target : DEFAULT_TARGET,
       hardcore: data.hardcore === true,
       soundOn: data.soundOn !== false,
       musicOn: data.musicOn !== false,
-      current: readGame(data.current),
+      world: isWorldId(data.world) ? data.world : EMPTY.world,
+      reached: Array.isArray(data.reached) ? data.reached.filter(isWorldId) : [],
+      playing,
     }
   } catch {
     return EMPTY
@@ -110,23 +130,27 @@ function read(): SavedState {
 function readGame(value: unknown): SavedGame | null {
   if (!value || typeof value !== 'object') return null
   const game = value as Partial<SavedGame>
-  if (!isTarget(game.target) || !Array.isArray(game.results)) return null
+  if (!isWorldId(game.world) || !Array.isArray(game.results)) return null
   return {
-    target: game.target,
+    world: game.world,
     startedAt: typeof game.startedAt === 'number' ? game.startedAt : Date.now(),
     results: game.results.filter((result) => result && typeof result.id === 'string' && typeof result.outcome === 'string'),
     pending: typeof game.pending === 'string' ? game.pending : undefined,
-    surprise: readSurprise(game.surprise),
+    met: readMet(game.met),
     retried: typeof game.retried === 'string' ? game.retried : undefined,
-    hardcore: typeof game.hardcore === 'boolean' ? game.hardcore : undefined,
+    hardcore: game.hardcore === true,
     swapped: Array.isArray(game.swapped) ? game.swapped.filter((id): id is string => typeof id === 'string') : undefined,
   }
 }
 
-function readSurprise(value: unknown): Surprise | undefined {
+function readMet(value: unknown): Met | undefined {
   if (!value || typeof value !== 'object') return undefined
-  const prize = (value as Partial<Surprise>).prize
-  return prize === null || isPrize(prize) ? { prize } : undefined
+  const met: Met = {}
+  for (const [key, prize] of Object.entries(value)) {
+    const index = Number(key)
+    if (Number.isInteger(index) && index >= 0 && (prize === null || isPrize(prize))) met[index] = prize
+  }
+  return met
 }
 
 let state: SavedState = read()
@@ -178,6 +202,17 @@ export function recordGame(game: GameRecord): void {
   update((current) => ({ ...current, games: [...current.games, game].slice(-MAX_GAMES) }))
 }
 
-export function saveGame(game: SavedGame | null): void {
-  update((current) => ({ ...current, current: game }))
+/** Saves the game in progress of a world, or forgets it (null). */
+export function saveGame(world: WorldId, game: SavedGame | null): void {
+  update((current) => {
+    const playing = { ...current.playing }
+    if (game) playing[world] = game
+    else delete playing[world]
+    return { ...current, playing }
+  })
+}
+
+/** The walker reached the arrival of a world: the next one opens. */
+export function markReached(world: WorldId): void {
+  update((current) => (current.reached.includes(world) ? current : { ...current, reached: [...current.reached, world] }))
 }

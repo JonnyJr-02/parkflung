@@ -1,27 +1,29 @@
 import { useEffect, useRef, useState } from 'react'
-import { stopsFor, TIER_INFO, worldOf, WORLDS, type Outcome } from '../game/tiers'
-import { sfx } from '../game/sound'
+import { stepOf, stopsFor, TIER_INFO, type Outcome } from '../game/tiers'
+import type { WorldInfo } from '../game/worlds'
 import { Scene } from './Scene'
 
 /**
  * Full-screen walk after each scoring answer: the whole trail in view, the walker strides to his
- * new place and the walked part of the trail fills with colour. When he walks into a new world
- * the weather changes once he gets there. Tap anywhere to skip ahead.
+ * new place and the walked part of the trail fills with colour. When he walks into a new step the
+ * sky changes once he gets there. Tap anywhere to skip ahead.
  */
 export function WalkOverlay({
+  world,
   from,
   to,
-  target,
+  goal,
   outcome,
-  surprise,
+  spots,
   onDone,
 }: {
+  world: WorldInfo
   from: number
   to: number
-  target: number
+  goal: number
   outcome: Outcome
-  /** The "?" square halfway, and whether it was already met. */
-  surprise?: { at: number; used: boolean }
+  /** The "?" squares of the world, and whether each was already met. */
+  spots: ReadonlyArray<{ at: number; used: boolean }>
   onDone: () => void
 }) {
   const [points, setPoints] = useState(from)
@@ -29,21 +31,24 @@ export function WalkOverlay({
   const doneRef = useRef(onDone)
   doneRef.current = onDone
   const finished = useRef(false)
-  const shownTo = Math.min(to, target)
-  const worldFrom = worldOf(from, target)
-  const worldTo = worldOf(shownTo, target)
-  const stops = stopsFor(target)
+  const shownTo = Math.min(to, goal)
+  const stepFrom = stepOf(from, goal)
+  const stepTo = stepOf(shownTo, goal)
+  const step = world.steps[arrived ? stepTo : stepFrom]!
+  const stops = stopsFor(goal)
   const passed = stops.filter((stop) => from < stop && to >= stop)
+  const newStep = stepTo > stepFrom && to < goal
+  const square = spots.some((spot) => !spot.used && from < spot.at && to >= spot.at)
   const milestone =
-    to >= target && from < target
-      ? 'Sei arrivato alla casa di Ale a Varigotti!'
-      : worldTo > worldFrom
-        ? `Nuovo mondo: ${WORLDS[worldTo]!.icon} ${WORLDS[worldTo]!.name}!`
-        : surprise && !surprise.used && from < surprise.at && to >= surprise.at
+    to >= goal && from < goal
+      ? world.arrival.title
+      : newStep
+        ? `Nuovo step: ${world.steps[stepTo]!.icon} ${world.steps[stepTo]!.name}!`
+        : square
           ? 'Casella imprevisti ?'
           : passed.length > 0
-          ? `Tappa ${stops.indexOf(passed[passed.length - 1]!) + 1} superata!`
-          : null
+            ? `Tappa ${stops.indexOf(passed[passed.length - 1]!) + 1} superata!`
+            : null
 
   function finish() {
     if (finished.current) return
@@ -56,19 +61,10 @@ export function WalkOverlay({
     return () => clearTimeout(start)
   }, [shownTo])
 
-  // Footsteps while the walker walks, one per stride.
-  useEffect(() => {
-    if (points === from || arrived) return
-    sfx.step()
-    const id = window.setInterval(sfx.step, 420)
-    return () => clearInterval(id)
-  }, [points, arrived])
-
   useEffect(() => {
     if (!arrived) return
-    if (milestone) sfx.stop()
-    // A new world gets a little longer, to enjoy the new weather.
-    const end = window.setTimeout(finish, worldTo > worldFrom ? 3400 : 2200)
+    // A new step gets a little longer, to enjoy the new sky.
+    const end = window.setTimeout(finish, newStep ? 3400 : 2200)
     return () => clearTimeout(end)
   }, [arrived])
 
@@ -76,12 +72,15 @@ export function WalkOverlay({
     <div className="walk" role="dialog" aria-modal="true" aria-label={`L'omino cammina fino a ${shownTo} punti`} onClick={finish}>
       <Scene
         className="walk-scene"
+        world={world.id}
+        sky={step.sky}
+        wobble={step.wobble}
+        walker={world.walker}
         points={points}
-        target={target}
-        world={arrived ? worldTo : worldFrom}
-        msPer100={3000 * (500 / target)}
-        surprise={surprise}
-        label={`Il sentiero: ${shownTo} punti su ${target}`}
+        target={goal}
+        msPer100={3000 * (500 / goal)}
+        spots={spots}
+        label={`Il sentiero: ${shownTo} punti su ${goal}`}
         onArrive={() => setArrived(true)}
       />
       <div className={`walk-top tier-${outcome}`}>
@@ -90,9 +89,9 @@ export function WalkOverlay({
       </div>
       <div className={`walk-bottom ${arrived ? 'show' : ''}`}>
         <p className="walk-total">
-          <strong>{shownTo}</strong> / {target}
+          <strong>{shownTo}</strong> / {goal}
         </p>
-        {milestone && <p className={worldTo > worldFrom ? 'walk-stop new-world' : 'walk-stop'}>{milestone}</p>}
+        {milestone && <p className={newStep ? 'walk-stop new-world' : 'walk-stop'}>{milestone}</p>}
         <p className="walk-hint">Tocca per continuare</p>
       </div>
     </div>

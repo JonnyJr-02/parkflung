@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { sfx } from '../game/sound'
 import { formatClock, timerLevel } from '../game/timer'
 
 const RADIUS = 19
@@ -26,7 +25,6 @@ export function Timer({ seconds, running, onExpire }: { seconds: number; running
       setLeft(now)
       if (now <= 0) {
         window.clearInterval(id)
-        sfx.buzzer()
         expireRef.current()
       }
     }, 200)
@@ -36,10 +34,6 @@ export function Timer({ seconds, running, onExpire }: { seconds: number; running
   const level = timerLevel(left, total)
   const wholeSeconds = Math.max(0, Math.ceil(left / 1000))
 
-  // A tick for each of the last five seconds.
-  useEffect(() => {
-    if (running && wholeSeconds > 0 && wholeSeconds <= 5 && wholeSeconds * 1000 < total) sfx.clock(wholeSeconds)
-  }, [wholeSeconds, running, total])
   return (
     <div
       className={`timer ${level}${running ? '' : ' paused'}`}

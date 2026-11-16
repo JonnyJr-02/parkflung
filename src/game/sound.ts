@@ -1,39 +1,28 @@
 /**
- * Every sound of the game, made on the spot with Web Audio: no files to download, so the app stays
- * small and works offline. Three buses: effects, music and the sounds of the worlds; the effects
- * follow the «Effetti sonori» switch, music and worlds the «Musica e ambienti» one. Phones only let
- * a page play sound after a touch, so nothing starts until the first tap.
+ * The sounds of the game, made on the spot with Web Audio: no files to download, so the app stays
+ * small and works offline. One tune per world plays all the time (the «Musica» switch); the only
+ * effects are the thermometer and a chime when a step or a world unlocks (the «Effetti sonori»
+ * switch). Phones only let a page play sound after a touch, so nothing starts until the first tap.
  */
 import { getState, subscribe } from './store'
-import type { Outcome } from './tiers'
+import type { WorldId } from './worlds'
 
-type Bus = 'sfx' | 'music' | 'ambience'
-type Tune = 'home'
+type Bus = 'sfx' | 'music'
 
-const BUS_LEVEL: Record<Bus, number> = { sfx: 0.6, music: 0.2, ambience: 0.32 }
+const BUS_LEVEL: Record<Bus, number> = { sfx: 0.6, music: 0.24 }
 
 let ctx: AudioContext | null = null
 let buses: Record<Bus, GainNode> | null = null
 let noiseBuffer: AudioBuffer | null = null
 let installed = false
 
-/** What the screens asked for; started (again) as soon as sound is allowed. */
-let wantedTune: Tune | null = null
-let wantedWorld: number | null = null
+/** The tune the screens asked for; started (again) as soon as sound is allowed. */
+let wantedTune: WorldId | null = null
 
 export function midi(note: number): number {
   return 440 * 2 ** ((note - 69) / 12)
 }
 
-function effectsOn(): boolean {
-  return getState().soundOn
-}
-
-function musicOn(): boolean {
-  return getState().musicOn
-}
-
-/** The audio clock and buses, once the first tap has unlocked them. */
 function ready(): { c: AudioContext; out: Record<Bus, GainNode> } | null {
   if (!ctx || !buses || ctx.state === 'closed') return null
   return { c: ctx, out: buses }
@@ -50,7 +39,7 @@ function setup(c: AudioContext) {
     gain.connect(compressor)
     return gain
   }
-  buses = { sfx: make('sfx'), music: make('music'), ambience: make('ambience') }
+  buses = { sfx: make('sfx'), music: make('music') }
   noiseBuffer = c.createBuffer(1, c.sampleRate * 2, c.sampleRate)
   const data = noiseBuffer.getChannelData(0)
   for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
@@ -78,7 +67,7 @@ export function installAudio(): void {
       }
     }
     if (ctx.state === 'suspended') void ctx.resume()
-    applyWanted()
+    applyTune()
   }
   for (const type of ['pointerdown', 'keydown', 'touchend']) window.addEventListener(type, unlock, { capture: true, passive: true })
   document.addEventListener('visibilitychange', () => {
@@ -86,7 +75,7 @@ export function installAudio(): void {
     if (document.hidden) void ctx.suspend()
     else void ctx.resume()
   })
-  subscribe(applyWanted)
+  subscribe(applyTune)
 }
 
 // ---------- Building blocks ----------
@@ -97,8 +86,6 @@ interface ToneOptions {
   attack?: number
   /** Glide to this frequency by the end. */
   slide?: number
-  /** Wobble depth in Hz. */
-  vibrato?: number
   /** Low-pass filter cutoff, for softer saw and square waves. */
   cutoff?: number
   bus?: Bus
@@ -113,15 +100,6 @@ function tone(freq: number, at: number, dur: number, o: ToneOptions = {}) {
   osc.type = o.type ?? 'sine'
   osc.frequency.setValueAtTime(freq, at)
   if (o.slide) osc.frequency.exponentialRampToValueAtTime(o.slide, at + dur)
-  if (o.vibrato) {
-    const lfo = c.createOscillator()
-    const depth = c.createGain()
-    lfo.frequency.value = 6
-    depth.gain.value = o.vibrato
-    lfo.connect(depth).connect(osc.frequency)
-    lfo.start(at)
-    lfo.stop(at + dur + 0.1)
-  }
   const peak = o.gain ?? 0.3
   gain.gain.setValueAtTime(0.0001, at)
   gain.gain.exponentialRampToValueAtTime(peak, at + (o.attack ?? 0.012))
@@ -139,18 +117,7 @@ function tone(freq: number, at: number, dur: number, o: ToneOptions = {}) {
   osc.stop(at + dur + 0.05)
 }
 
-interface NoiseOptions {
-  filter?: BiquadFilterType
-  freq?: number
-  /** Sweep the filter to this frequency by the end. */
-  sweep?: number
-  q?: number
-  gain?: number
-  attack?: number
-  bus?: Bus
-}
-
-function noise(at: number, dur: number, o: NoiseOptions = {}) {
+function noise(at: number, dur: number, o: { filter?: BiquadFilterType; freq?: number; gain?: number; bus?: Bus } = {}) {
   const r = ready()
   if (!r || !noiseBuffer) return
   const { c, out } = r
@@ -159,39 +126,23 @@ function noise(at: number, dur: number, o: NoiseOptions = {}) {
   source.loop = true
   const filter = c.createBiquadFilter()
   filter.type = o.filter ?? 'lowpass'
-  filter.frequency.setValueAtTime(o.freq ?? 1000, at)
-  if (o.sweep) filter.frequency.exponentialRampToValueAtTime(o.sweep, at + dur)
-  filter.Q.value = o.q ?? 0.8
+  filter.frequency.value = o.freq ?? 1000
   const gain = c.createGain()
   gain.gain.setValueAtTime(0.0001, at)
-  gain.gain.exponentialRampToValueAtTime(o.gain ?? 0.3, at + (o.attack ?? 0.005))
+  gain.gain.exponentialRampToValueAtTime(o.gain ?? 0.3, at + 0.005)
   gain.gain.exponentialRampToValueAtTime(0.0001, at + dur)
   source.connect(filter).connect(gain).connect(out[o.bus ?? 'sfx'])
   source.start(at, Math.random() * 1.5)
   source.stop(at + dur + 0.05)
 }
 
-/** Notes one after the other: [midi note, length in seconds]. */
-function melody(notes: ReadonlyArray<readonly [number, number]>, at: number, o: ToneOptions = {}, gap = 0) {
-  let time = at
-  for (const [note, length] of notes) {
-    if (note > 0) tone(midi(note), time, length * 1.4, o)
-    time += length + gap
-  }
-  return time
-}
-
+/** The audio clock, if effects are on and sound is unlocked. */
 function now(): number | null {
   const r = ready()
-  return r && effectsOn() ? r.c.currentTime + 0.01 : null
+  return r && getState().soundOn ? r.c.currentTime + 0.01 : null
 }
 
-// ---------- Effects ----------
-
-/** Pitch of the walker's steps, left and right. */
-let stepSide = 0
-/** Fireworks can be many at the house: a little gap between bangs. */
-let lastBang = 0
+// ---------- Effects: the thermometer, and the unlock chime ----------
 
 export const sfx = {
   /** A rung of the thermometer lights up: higher and higher. */
@@ -210,7 +161,7 @@ export const sfx = {
     const hit = () => {
       if (stopped) return
       const t = now()
-      if (t !== null) noise(t, 0.05, { filter: 'bandpass', freq: 2600, q: 0.7, gain: level })
+      if (t !== null) noise(t, 0.05, { filter: 'bandpass', freq: 2600, gain: level })
       delay = Math.max(55, delay * 0.95)
       level = Math.min(0.14, level * 1.04)
       window.setTimeout(hit, delay)
@@ -225,7 +176,7 @@ export const sfx = {
   up() {
     const t = now()
     if (t === null) return
-    melody([[79, 0.07], [84, 0.07], [88, 0.12]], t, { type: 'triangle', gain: 0.22 })
+    ;[79, 84, 88].forEach((note, i) => tone(midi(note), t + i * 0.07, 0.16, { type: 'triangle', gain: 0.22 }))
   },
 
   /** The bar falls back. */
@@ -235,197 +186,22 @@ export const sfx = {
     tone(260, t, 0.45, { type: 'sawtooth', slide: 110, gain: 0.16, cutoff: 900 })
   },
 
-  /** The rarity, once the thermometer stops: from the sad trombone to Jonny's sparkle. */
-  rarity(outcome: Outcome) {
+  /** A new step of the world, or a new world: a rising chime with a little glitter. */
+  unlock(big = false) {
     const t = now()
     if (t === null) return
-    switch (outcome) {
-      case 'miss': {
-        const end = melody([[55, 0.32], [54, 0.32], [53, 0.32]], t + 0.1, { type: 'sawtooth', gain: 0.18, cutoff: 1100 })
-        tone(midi(52), end, 1.1, { type: 'sawtooth', gain: 0.18, cutoff: 1100, vibrato: 4 })
-        break
-      }
-      case 'c':
-        tone(midi(84), t, 0.6, { gain: 0.22 })
-        tone(midi(96), t, 0.4, { gain: 0.05 })
-        break
-      case 'n':
-        melody([[76, 0.12], [81, 0.4]], t, { type: 'triangle', gain: 0.22 })
-        break
-      case 'r':
-        melody([[72, 0.09], [76, 0.09], [79, 0.09], [84, 0.45]], t, { type: 'triangle', gain: 0.22 })
-        break
-      case 'e':
-        melody([[79, 0.08], [83, 0.08], [86, 0.08], [91, 0.5]], t, { type: 'triangle', gain: 0.2 })
-        sparkle(t + 0.3, 6)
-        break
-      case 't':
-        // Marco B. gets the fanfare (sfx.fanfare) on its own full screen.
-        break
+    const notes = big ? [72, 76, 79, 84, 88, 91, 96] : [76, 79, 84, 88]
+    notes.forEach((note, i) => tone(midi(note), t + i * 0.09, 0.5, { type: 'triangle', gain: 0.18 }))
+    const glitter = [88, 91, 93, 96, 98, 100]
+    for (let i = 0; i < (big ? 14 : 6); i++) {
+      tone(midi(glitter[Math.floor(Math.random() * glitter.length)]!), t + 0.3 + i * 0.06, 0.25, { gain: 0.05 })
     }
   },
-
-  /** Marco B.: the fanfare. */
-  fanfare() {
-    const t = now()
-    if (t === null) return
-    const brass: ToneOptions = { type: 'sawtooth', gain: 0.16, cutoff: 2400 }
-    const end = melody([[72, 0.11], [72, 0.11], [72, 0.11], [79, 0.45], [76, 0.14], [79, 0.14]], t, brass, 0.02)
-    for (const note of [72, 76, 79, 84]) tone(midi(note), end, 1.4, { ...brass, gain: 0.1 })
-    sparkle(end, 10)
-  },
-
-  /** One step of the walker. */
-  step() {
-    const t = now()
-    if (t === null) return
-    stepSide = 1 - stepSide
-    noise(t, 0.07, { freq: stepSide ? 420 : 340, gain: 0.22 })
-    tone(stepSide ? 95 : 82, t, 0.06, { gain: 0.12 })
-  },
-
-  /** The walker reaches a stop on the trail. */
-  stop() {
-    const t = now()
-    if (t === null) return
-    tone(midi(88), t, 1, { gain: 0.14 })
-    tone(midi(100), t + 0.02, 0.8, { gain: 0.05 })
-  },
-
-  /** A world left behind: a chime that grows with the worlds. */
-  world(world: number) {
-    const t = now()
-    if (t === null) return
-    const scale = [72, 76, 79, 84, 88, 91, 96]
-    melody(
-      scale.slice(0, 3 + world).map((note) => [note, 0.1] as const),
-      t + 0.2,
-      { type: 'triangle', gain: 0.18 },
-    )
-    sparkle(t + 0.4 + world * 0.1, 4 + world * 3)
-  },
-
-  /** The arrival at the house of Ale: the biggest fanfare. */
-  house() {
-    const t = now()
-    if (t === null) return
-    const brass: ToneOptions = { type: 'sawtooth', gain: 0.15, cutoff: 2600 }
-    const end = melody(
-      [[67, 0.14], [72, 0.14], [76, 0.14], [79, 0.3], [76, 0.14], [79, 0.6], [81, 0.14], [79, 0.14], [77, 0.14], [76, 0.14], [74, 0.14], [72, 0.4]],
-      t + 0.3,
-      brass,
-      0.02,
-    )
-    for (const note of [60, 64, 67, 72, 76]) tone(midi(note), end, 2, { ...brass, gain: 0.08 })
-    sparkle(end, 16)
-  },
-
-  /** The questions ran out: a short tune, brighter the further the walker got. */
-  over(world: number) {
-    const t = now()
-    if (t === null) return
-    if (world <= 1) melody([[67, 0.2], [64, 0.2], [62, 0.2], [60, 0.6]], t + 0.3, { type: 'triangle', gain: 0.18 })
-    else melody([[60, 0.14], [64, 0.14], [67, 0.14], [72, 0.5]], t + 0.3, { type: 'triangle', gain: 0.18 })
-    if (world >= 3) sparkle(t + 1, 8)
-  },
-
-  /** A fast swish: changing question, turning the card. */
-  whoosh() {
-    const t = now()
-    if (t === null) return
-    noise(t, 0.35, { filter: 'bandpass', freq: 500, sweep: 3200, q: 1.2, gain: 0.2, attack: 0.08 })
-  },
-
-  /** The answer is not on the list. */
-  wrong() {
-    const t = now()
-    if (t === null) return
-    tone(170, t, 0.13, { type: 'square', gain: 0.1, cutoff: 1200 })
-    tone(150, t + 0.16, 0.18, { type: 'square', gain: 0.1, cutoff: 1200 })
-  },
-
-  /** The "?" square: something is about to happen. */
-  mystery() {
-    const t = now()
-    if (t === null) return
-    melody([[60, 0.12], [63, 0.12], [66, 0.12], [69, 0.12], [72, 0.5]], t, { type: 'triangle', gain: 0.18, vibrato: 3 })
-  },
-
-  /** The wheel spins: a click every time a slice passes the pointer, slower and slower. */
-  wheel(turn: number, seconds: number) {
-    const t = now()
-    if (t === null) return
-    for (const at of wheelTickTimes(turn, seconds)) {
-      noise(t + at, 0.025, { filter: 'highpass', freq: 2500, gain: 0.16 })
-      tone(1700, t + at, 0.03, { type: 'square', gain: 0.03 })
-    }
-  },
-
-  /** What the wheel gave: red, blue or gold. */
-  prize(kind: 'malus' | 'bonus' | 'gold') {
-    const t = now()
-    if (t === null) return
-    if (kind === 'malus') {
-      const end = melody([[60, 0.25], [59, 0.25]], t, { type: 'sawtooth', gain: 0.16, cutoff: 1000 })
-      tone(midi(58), end, 0.9, { type: 'sawtooth', gain: 0.16, cutoff: 1000, vibrato: 4 })
-    } else if (kind === 'bonus') {
-      melody([[72, 0.1], [76, 0.1], [79, 0.1], [84, 0.1], [88, 0.4]], t, { type: 'triangle', gain: 0.2 })
-    } else {
-      melody([[79, 0.08], [84, 0.08], [88, 0.08], [91, 0.08], [96, 0.6]], t, { type: 'triangle', gain: 0.18 })
-      sparkle(t + 0.3, 14)
-    }
-  },
-
-  /** The Carta Rivincita turns over. */
-  card() {
-    sfx.whoosh()
-    const t = now()
-    if (t !== null) sparkle(t + 0.25, 8)
-  },
-
-  /** The last seconds of the timer. */
-  clock(secondsLeft: number) {
-    const t = now()
-    if (t === null) return
-    tone(secondsLeft <= 1 ? 1400 : 1000, t, 0.05, { type: 'triangle', gain: 0.2 })
-  },
-
-  /** Time is up. */
-  buzzer() {
-    const t = now()
-    if (t === null) return
-    tone(118, t, 0.6, { type: 'square', gain: 0.12, cutoff: 900 })
-    tone(123, t, 0.6, { type: 'square', gain: 0.08, cutoff: 900 })
-  },
-
-  /** A firework: the rocket whistles up. */
-  rocket() {
-    const t = now()
-    if (t === null) return
-    tone(500, t, 0.7, { gain: 0.035, slide: 1600, attack: 0.05 })
-  },
-
-  /** A firework bursts: a bang and a crackle. */
-  bang() {
-    const t = now()
-    if (t === null || t - lastBang < 0.15) return
-    lastBang = t
-    noise(t, 0.7, { freq: 1600, sweep: 200, gain: 0.32 })
-    for (let i = 0; i < 6; i++) noise(t + 0.15 + Math.random() * 0.5, 0.03, { filter: 'highpass', freq: 3500, gain: 0.08 })
-  },
-}
-
-/** Little high notes, like glitter. */
-function sparkle(at: number, count: number) {
-  const notes = [84, 86, 88, 91, 93, 96, 98, 100]
-  for (let i = 0; i < count; i++) {
-    tone(midi(notes[Math.floor(Math.random() * notes.length)]!), at + i * 0.06 + Math.random() * 0.03, 0.25, { gain: 0.05 })
-  }
 }
 
 /**
- * When the wheel's slices pass the pointer, in seconds from the start of the spin. The wheel slows
- * down like the CSS curve that turns it (fast, then a long gentle stop).
+ * When the wheel's slices pass the pointer, in seconds from the start of the spin. Kept for the
+ * wheel's timing; the wheel itself makes no sound any more.
  */
 export function wheelTickTimes(turn: number, seconds: number, slice = 72): number[] {
   const ticks: number[] = []
@@ -437,58 +213,166 @@ export function wheelTickTimes(turn: number, seconds: number, slice = 72): numbe
   return ticks
 }
 
-// ---------- Music ----------
+// ---------- The tunes, one per world ----------
 
-/** The home tune: a cheerful seaside walk, 8 bars, [midi note, beats]. */
-const HOME_MELODY: ReadonlyArray<readonly [number, number]> = [
-  [76, 0.5], [79, 0.5], [81, 1], [79, 0.5], [76, 0.5], [74, 1],
-  [72, 0.5], [74, 0.5], [76, 1], [79, 1], [76, 1],
-  [77, 0.5], [81, 0.5], [84, 1], [81, 0.5], [77, 0.5], [74, 1],
-  [76, 0.5], [74, 0.5], [72, 1], [74, 2],
-  [76, 0.5], [79, 0.5], [81, 1], [79, 0.5], [76, 0.5], [74, 1],
-  [72, 0.5], [74, 0.5], [76, 1], [79, 1], [81, 1],
-  [79, 0.5], [77, 0.5], [76, 1], [74, 0.5], [76, 0.5], [77, 1],
-  [76, 1], [74, 1], [72, 2],
-]
-/** One chord root per bar: C C F G C Am G C. */
-const HOME_BASS = [48, 48, 53, 55, 48, 57, 55, 48]
-const HOME_BEAT = 60 / 104
+interface Tune {
+  bpm: number
+  beatsPerBar: number
+  /** [midi note, beats]: a rest is note 0. */
+  melody: ReadonlyArray<readonly [number, number]>
+  /** One chord root per bar. */
+  roots: readonly number[]
+  /** Beats of the bar where the bass plays: the root, then the fifth. */
+  bassBeats: readonly number[]
+  lead: ToneOptions & { length?: number }
+  bass: ToneOptions
+  /** A soft hi-hat on every beat, louder off the beat. */
+  hat: number
+}
+
+export const TUNES: Record<WorldId, Tune> = {
+  // Parcheggio: a slow night groove in A minor.
+  parcheggio: {
+    bpm: 84,
+    beatsPerBar: 4,
+    melody: [
+      [69, 1], [72, 0.5], [76, 0.5], [74, 1], [72, 1],
+      [69, 1.5], [67, 0.5], [69, 2],
+      [72, 1], [76, 0.5], [79, 0.5], [76, 1], [74, 1],
+      [72, 1.5], [69, 0.5], [67, 2],
+      [69, 1], [72, 0.5], [76, 0.5], [81, 1], [79, 1],
+      [76, 1.5], [74, 0.5], [72, 2],
+      [74, 1], [76, 0.5], [74, 0.5], [72, 1], [69, 1],
+      [69, 4],
+    ],
+    roots: [57, 57, 60, 55, 57, 52, 50, 57],
+    bassBeats: [0, 2],
+    lead: { type: 'triangle', gain: 0.12, length: 0.9 },
+    bass: { type: 'sine', gain: 0.3 },
+    hat: 0.03,
+  },
+  // Tigros: a bouncy supermarket jingle in C.
+  tigros: {
+    bpm: 128,
+    beatsPerBar: 4,
+    melody: [
+      [72, 0.5], [76, 0.5], [79, 0.5], [76, 0.5], [84, 1], [79, 1],
+      [81, 0.5], [79, 0.5], [77, 0.5], [76, 0.5], [74, 2],
+      [74, 0.5], [77, 0.5], [81, 0.5], [77, 0.5], [86, 1], [81, 1],
+      [83, 0.5], [81, 0.5], [79, 0.5], [77, 0.5], [76, 2],
+      [72, 0.5], [76, 0.5], [79, 0.5], [76, 0.5], [84, 1], [79, 1],
+      [81, 0.5], [83, 0.5], [84, 0.5], [81, 0.5], [79, 2],
+      [77, 0.5], [76, 0.5], [74, 0.5], [76, 0.5], [77, 0.5], [74, 0.5], [71, 1],
+      [72, 4],
+    ],
+    roots: [48, 53, 50, 55, 48, 57, 55, 48],
+    bassBeats: [0, 1, 2, 3],
+    lead: { type: 'square', gain: 0.06, cutoff: 2200, length: 0.6 },
+    bass: { type: 'triangle', gain: 0.24 },
+    hat: 0.05,
+  },
+  // Casa di Ale: a summer strum in G, short notes like a ukulele.
+  casa: {
+    bpm: 112,
+    beatsPerBar: 4,
+    melody: [
+      [67, 0.5], [71, 0.5], [74, 1], [71, 0.5], [74, 0.5], [76, 1],
+      [74, 0.5], [71, 0.5], [67, 1], [69, 2],
+      [72, 0.5], [76, 0.5], [79, 1], [76, 0.5], [74, 0.5], [72, 1],
+      [71, 0.5], [69, 0.5], [67, 1], [74, 2],
+      [67, 0.5], [71, 0.5], [74, 1], [71, 0.5], [74, 0.5], [76, 1],
+      [74, 0.5], [71, 0.5], [67, 1], [76, 2],
+      [72, 0.5], [74, 0.5], [76, 1], [74, 0.5], [72, 0.5], [69, 1],
+      [67, 4],
+    ],
+    roots: [55, 55, 60, 50, 55, 52, 50, 55],
+    bassBeats: [0, 2],
+    lead: { type: 'triangle', gain: 0.14, length: 0.45 },
+    bass: { type: 'sine', gain: 0.28 },
+    hat: 0.04,
+  },
+  // Varigotti: the seaside walk of the original game.
+  varigotti: {
+    bpm: 104,
+    beatsPerBar: 4,
+    melody: [
+      [76, 0.5], [79, 0.5], [81, 1], [79, 0.5], [76, 0.5], [74, 1],
+      [72, 0.5], [74, 0.5], [76, 1], [79, 1], [76, 1],
+      [77, 0.5], [81, 0.5], [84, 1], [81, 0.5], [77, 0.5], [74, 1],
+      [76, 0.5], [74, 0.5], [72, 1], [74, 2],
+      [76, 0.5], [79, 0.5], [81, 1], [79, 0.5], [76, 0.5], [74, 1],
+      [72, 0.5], [74, 0.5], [76, 1], [79, 1], [81, 1],
+      [79, 0.5], [77, 0.5], [76, 1], [74, 0.5], [76, 0.5], [77, 1],
+      [76, 1], [74, 1], [72, 2],
+    ],
+    roots: [48, 48, 53, 55, 48, 57, 55, 48],
+    bassBeats: [0, 1, 2, 3],
+    lead: { type: 'square', gain: 0.07, cutoff: 1800, length: 0.95 },
+    bass: { type: 'triangle', gain: 0.22 },
+    hat: 0.04,
+  },
+  // Decanter: a pub jig in D, six quick beats to the bar.
+  decanter: {
+    bpm: 300,
+    beatsPerBar: 6,
+    melody: [
+      [74, 1], [78, 1], [81, 1], [78, 1], [81, 1], [86, 1],
+      [85, 1], [81, 1], [78, 1], [76, 3],
+      [74, 1], [78, 1], [81, 1], [83, 1], [81, 1], [78, 1],
+      [79, 1], [76, 1], [73, 1], [74, 3],
+      [74, 1], [78, 1], [81, 1], [78, 1], [81, 1], [86, 1],
+      [86, 1], [83, 1], [79, 1], [81, 3],
+      [78, 1], [81, 1], [78, 1], [76, 1], [74, 1], [73, 1],
+      [74, 6],
+    ],
+    roots: [50, 57, 50, 57, 50, 55, 57, 50],
+    bassBeats: [0, 3],
+    lead: { type: 'square', gain: 0.06, cutoff: 2600, length: 0.9 },
+    bass: { type: 'triangle', gain: 0.26 },
+    hat: 0.035,
+  },
+}
 
 let tuneTimer = 0
-let tuneNext = 0
-let tuneStep = 0
+let tunePlaying: WorldId | null = null
 
-function startTune() {
+function startTune(id: WorldId) {
   const r = ready()
-  if (!r || tuneTimer) return
-  tuneNext = r.c.currentTime + 0.2
-  tuneStep = 0
-  const melodyStarts: number[] = []
-  let beat = 0
-  for (const [, length] of HOME_MELODY) {
-    melodyStarts.push(beat)
-    beat += length
+  if (!r || tunePlaying === id) return
+  stopTune()
+  tunePlaying = id
+  const tune = TUNES[id]
+  const beat = 60 / tune.bpm
+  const starts: number[] = []
+  let total = 0
+  for (const [, length] of tune.melody) {
+    starts.push(total)
+    total += length
   }
-  const loopBeats = beat
+  let next = r.c.currentTime + 0.25
+  let step = 0
   // Schedule a little ahead, one beat at a time.
   tuneTimer = window.setInterval(() => {
-    const ready2 = ready()
-    if (!ready2) return
-    while (tuneNext < ready2.c.currentTime + 0.4) {
-      const beatInLoop = tuneStep % loopBeats
-      const at = tuneNext
-      const bar = Math.floor(beatInLoop / 4)
-      const root = HOME_BASS[bar]!
-      tone(midi(beatInLoop % 2 === 0 ? root : root + 7), at, HOME_BEAT * 0.9, { type: 'triangle', gain: 0.22, bus: 'music' })
-      noise(at, 0.05, { filter: 'highpass', freq: 6000, gain: beatInLoop % 2 ? 0.05 : 0.03, bus: 'music' })
-      HOME_MELODY.forEach(([note, length], index) => {
-        const start = melodyStarts[index]!
-        if (start >= beatInLoop && start < beatInLoop + 1) {
-          tone(midi(note), at + (start - beatInLoop) * HOME_BEAT, length * HOME_BEAT * 0.95, { type: 'square', gain: 0.07, cutoff: 1800, bus: 'music' })
+    const live = ready()
+    if (!live) return
+    while (next < live.c.currentTime + 0.4) {
+      const inLoop = step % total
+      const inBar = inLoop % tune.beatsPerBar
+      const root = tune.roots[Math.floor(inLoop / tune.beatsPerBar) % tune.roots.length]!
+      const bassIndex = tune.bassBeats.indexOf(inBar)
+      if (bassIndex >= 0) tone(midi(bassIndex % 2 === 0 ? root : root + 7), next, beat * 1.6, { ...tune.bass, bus: 'music' })
+      noise(next, 0.05, { filter: 'highpass', freq: 6000, gain: inBar % 2 ? tune.hat : tune.hat * 0.6, bus: 'music' })
+      tune.melody.forEach(([note, length], index) => {
+        const start = starts[index]!
+        if (note > 0 && start >= inLoop && start < inLoop + 1) {
+          tone(midi(note), next + (start - inLoop) * beat, Math.max(0.12, length * beat * (tune.lead.length ?? 0.9)), {
+            ...tune.lead,
+            bus: 'music',
+          })
         }
       })
-      tuneStep += 1
-      tuneNext += HOME_BEAT
+      step += 1
+      next += beat
     }
   }, 80)
 }
@@ -496,147 +380,17 @@ function startTune() {
 function stopTune() {
   window.clearInterval(tuneTimer)
   tuneTimer = 0
+  tunePlaying = null
 }
 
-/** The tune for the screen on show: the home tune, or none. */
-export function playTune(tune: Tune | null): void {
-  wantedTune = tune
-  applyWanted()
+/** The tune of a world, or none. */
+export function playTune(world: WorldId | null): void {
+  wantedTune = world
+  applyTune()
 }
 
-// ---------- The sounds of the worlds ----------
-
-interface Ambience {
-  world: number
-  gain: GainNode
-  sources: AudioScheduledSourceNode[]
-  timers: number[]
-}
-
-let ambience: Ambience | null = null
-
-function loopNoise(c: AudioContext, into: AudioNode, filter: BiquadFilterType, freq: number, gain: number, q = 0.7) {
-  const source = c.createBufferSource()
-  source.buffer = noiseBuffer
-  source.loop = true
-  const f = c.createBiquadFilter()
-  f.type = filter
-  f.frequency.value = freq
-  f.Q.value = q
-  const g = c.createGain()
-  g.gain.value = gain
-  source.connect(f).connect(g).connect(into)
-  source.start(0, Math.random() * 1.5)
-  return { source, filter: f, gain: g }
-}
-
-function bird(at: number) {
-  const base = 2400 + Math.random() * 1400
-  const notes = 2 + Math.floor(Math.random() * 3)
-  for (let i = 0; i < notes; i++) tone(base * (1 + Math.random() * 0.3), at + i * 0.11, 0.09, { gain: 0.05, slide: base * 1.5, bus: 'ambience' })
-}
-
-function gull(at: number) {
-  for (let i = 0; i < 2; i++) tone(1300, at + i * 0.32, 0.28, { type: 'triangle', gain: 0.04, slide: 850, vibrato: 25, bus: 'ambience' })
-}
-
-function thunder(at: number) {
-  noise(at, 0.25, { filter: 'highpass', freq: 1200, gain: 0.25, bus: 'ambience' })
-  noise(at + 0.05, 3.2, { freq: 160, gain: 0.9, attack: 0.15, bus: 'ambience' })
-}
-
-function startAmbience(world: number): Ambience | null {
-  const r = ready()
-  if (!r || !noiseBuffer) return null
-  const { c, out } = r
-  const gain = c.createGain()
-  gain.gain.setValueAtTime(0.0001, c.currentTime)
-  gain.gain.exponentialRampToValueAtTime(1, c.currentTime + 1.5)
-  gain.connect(out.ambience)
-  const sources: AudioScheduledSourceNode[] = []
-  const timers: number[] = []
-  // Plays at random intervals, so the world never sounds like a loop.
-  const later = (min: number, max: number, play: () => void) => {
-    const run = () => {
-      timers.push(
-        window.setTimeout(() => {
-          const ready2 = ready()
-          if (ready2) play()
-          run()
-        }, (min + Math.random() * (max - min)) * 1000),
-      )
-    }
-    run()
-  }
-  if (world <= 1) {
-    // Rain: heavy with thunder in the storm, light with drops in the drizzle.
-    const rain = loopNoise(c, gain, 'highpass', world === 0 ? 700 : 1800, world === 0 ? 0.55 : 0.22)
-    sources.push(rain.source)
-    if (world === 0) later(6, 13, () => thunder(c.currentTime))
-    else later(0.3, 1.2, () => tone(1600 + Math.random() * 1200, c.currentTime, 0.05, { gain: 0.03, bus: 'ambience' }))
-  } else if (world <= 3) {
-    // Wind under the clouds, birds in the sun.
-    const wind = loopNoise(c, gain, 'lowpass', 500, world === 2 ? 0.35 : 0.15)
-    const lfo = c.createOscillator()
-    const depth = c.createGain()
-    lfo.frequency.value = 0.09
-    depth.gain.value = 260
-    lfo.connect(depth).connect(wind.filter.frequency)
-    lfo.start()
-    sources.push(wind.source, lfo)
-    later(world === 2 ? 4 : 1.2, world === 2 ? 9 : 3.5, () => bird(c.currentTime))
-  } else {
-    // The sunset by the sea: slow waves and a gull now and then.
-    const sea = loopNoise(c, gain, 'lowpass', 750, 0.5)
-    const swell = c.createOscillator()
-    const depth = c.createGain()
-    swell.frequency.value = 0.12
-    depth.gain.value = 0.4
-    swell.connect(depth).connect(sea.gain.gain)
-    swell.start()
-    sources.push(sea.source, swell)
-    later(6, 13, () => gull(c.currentTime))
-  }
-  return { world, gain, sources, timers }
-}
-
-function stopAmbience() {
-  const current = ambience
-  ambience = null
-  if (!current) return
-  current.timers.forEach(clearTimeout)
-  const r = ready()
-  if (!r) return
-  const at = r.c.currentTime
-  current.gain.gain.cancelScheduledValues(at)
-  current.gain.gain.setValueAtTime(Math.max(0.0001, current.gain.gain.value), at)
-  current.gain.gain.exponentialRampToValueAtTime(0.0001, at + 1.2)
-  current.sources.forEach((source) => {
-    try {
-      source.stop(at + 1.3)
-    } catch {
-      // Already stopped.
-    }
-  })
-}
-
-/** The sounds of the world the walker is in (0 storm … 4 sunset), or none. */
-export function playWorld(world: number | null): void {
-  wantedWorld = world
-  applyWanted()
-}
-
-/** Starts or stops music and worlds to match what the screens asked for and the switches. */
-function applyWanted() {
-  const r = ready()
-  if (!r) return
-  const music = musicOn()
-  if (music && wantedTune) startTune()
+function applyTune() {
+  if (!ready()) return
+  if (getState().musicOn && wantedTune) startTune(wantedTune)
   else stopTune()
-  const world = music ? wantedWorld : null
-  if (world === null) stopAmbience()
-  else if (!ambience || ambience.world !== world) {
-    stopAmbience()
-    ambience = startAmbience(world)
-  }
 }
