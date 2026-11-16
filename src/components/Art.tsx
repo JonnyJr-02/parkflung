@@ -245,28 +245,36 @@ function RivieraHouse() {
   )
 }
 
-/** The Decanter: a red and yellow pub with red curtains and lanterns. */
+/**
+ * The Decanter, as it looks at night: a dark front under a long burgundy sign with «decanter» in
+ * white, two spotlights, and warm windows with bottles on the shelves behind red curtains.
+ */
 function Pub() {
+  const bottles = [0, 1, 2, 3, 4, 5]
   return (
     <g className="arr-pub">
-      <rect className="p-ink arr-pub-front" x={262} y={118} width={84} height={62} />
-      <rect className="p-ink arr-pub-cornice" x={258} y={111} width={92} height={8} />
-      <rect className="p-ink arr-pub-sign" x={270} y={122} width={68} height={13} rx={2} />
-      <text className="arr-pub-name" x={304} y={131.5}>
-        DECANTER
+      <rect className="p-ink arr-pub-front" x={260} y={124} width={88} height={56} />
+      <path className="p-ink arr-pub-sign" d="M252 113 L356 104 L356 121 L252 129 Z" />
+      <text className="arr-pub-name" x={304} y={121.5} transform="rotate(-4.9 304 117)">
+        decanter
       </text>
-      {[268, 318].map((x) => (
+      <circle className="arr-spot" cx={266} cy={131} r={2} />
+      <circle className="arr-spot" cx={342} cy={125} r={2} />
+      {[266, 318].map((x) => (
         <g key={x}>
-          <rect className="p-ink arr-pub-window" x={x} y={140} width={22} height={24} />
-          <path className="arr-curtain" d={`M${x} 140 h9 q-3 10 -9 16 Z M${x + 22} 140 h-9 q3 10 9 16 Z`} />
+          <rect className="p-ink arr-pub-window" x={x} y={138} width={24} height={26} />
+          <path className="arr-shelf" d={`M${x + 2} 147 h20 M${x + 2} 156 h20`} />
+          {bottles.map((n) => (
+            <rect key={n} className={`arr-bottle b${n % 3}`} x={x + 4 + n * 3} y={n % 2 ? 141 : 142} width={2} height={n % 2 ? 6 : 5} rx={0.8} />
+          ))}
+          {bottles.map((n) => (
+            <rect key={`l${n}`} className={`arr-bottle b${(n + 1) % 3}`} x={x + 4 + n * 3} y={150} width={2} height={6} rx={0.8} />
+          ))}
+          <path className="arr-curtain" d={`M${x} 138 h7 q-2 12 -7 18 Z M${x + 24} 138 h-7 q2 12 7 18 Z`} />
         </g>
       ))}
-      <path className="arr-awning" d="M292 140 h24 l-3 6 h-18 Z" />
-      <path className="arr-awning-stripes" d="M298 140 l-1 6 M304 140 v6 M310 140 l1 6" />
       <rect className="p-ink arr-pub-door" x={296} y={146} width={16} height={34} />
       <circle className="arr-pub-porthole" cx={304} cy={155} r={3} />
-      <circle className="arr-lantern" cx={265} cy={130} r={3} />
-      <circle className="arr-lantern" cx={343} cy={130} r={3} />
       <rect className="p-ink arr-barrel" x={346} y={164} width={11} height={16} rx={4} />
     </g>
   )

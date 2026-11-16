@@ -4060,61 +4060,61 @@ button {
 }
 
 .arr-pub-front {
-  fill: #b3261e;
-}
-
-.arr-pub-cornice {
-  fill: #f2c230;
+  fill: #1c1616;
 }
 
 .arr-pub-sign {
-  fill: #1d2a44;
+  fill: #7a1f22;
 }
 
 .arr-pub-name {
-  fill: #f2c230;
-  font-weight: 800;
-  font-size: 9.5px;
-  letter-spacing: 0.5px;
+  fill: #fff4ec;
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 2.6px;
   text-anchor: middle;
 }
 
+.arr-spot {
+  fill: #ffffff;
+  filter: drop-shadow(0 0 2px #ffffff);
+}
+
 .arr-pub-window {
-  fill: #ffd86b;
+  fill: #ff9d3c;
+}
+
+.arr-shelf {
+  fill: none;
+  stroke: #6b2e14;
+  stroke-width: 1.4;
+}
+
+.arr-bottle.b0 {
+  fill: #fff4ec;
+}
+
+.arr-bottle.b1 {
+  fill: #6fbf73;
+}
+
+.arr-bottle.b2 {
+  fill: #c0392b;
 }
 
 .arr-curtain {
-  fill: #e0352a;
+  fill: #8e1b1b;
   stroke: #1d2a44;
   stroke-width: 1;
-}
-
-.arr-awning {
-  fill: #f2c230;
-  stroke: #1d2a44;
-  stroke-width: 1;
-}
-
-.arr-awning-stripes {
-  stroke: #e0352a;
-  stroke-width: 3;
 }
 
 .arr-pub-door {
-  fill: #6b2a1a;
+  fill: #3a2416;
 }
 
 .arr-pub-porthole {
-  fill: #ffd86b;
-}
-
-.arr-lantern {
-  fill: #ffd86b;
-  animation: lantern 1.8s ease-in-out infinite alternate;
-}
-
-@keyframes lantern {
-  to { fill: #fff3b0; }
+  fill: #ff9d3c;
 }
 
 .arr-barrel {

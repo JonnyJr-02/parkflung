@@ -17,7 +17,7 @@ al traguardo del mondo. App per telefono (PWA), in italiano.
   4. **Varigotti** (1250): il gioco originale, dal temporale al tramonto, fino alla casa di Ale a
      Varigotti. Imprevisti a 250 e a 750 (obbligatorio).
   5. **Decanter** (1500): di notte; step Sobri, Sbrillo, Birillo, Ubriachi, 💀. Boccale in mano; il
-     traguardo è il pub rosso e giallo con le tende rosse. Imprevisti obbligatori a 500 e a 1000.
+     traguardo è il pub: facciata scura, insegna bordeaux con «decanter» in bianco, vetrine calde con le bottiglie e le tende rosse. Imprevisti obbligatori a 500 e a 1000.
 - **Step:** ogni mondo ne ha 5, uno ogni quinto di sentiero, con il cielo che cambia. Entrando in uno
   step nuovo parte un'animazione a schermo intero con un suono. Negli step «fatti» la scena ondeggia.
 - **Domande:** una ogni 25 punti (20, 30, 40, 50, 60 dal Parcheggio al Decanter), il 25% in meno senza
