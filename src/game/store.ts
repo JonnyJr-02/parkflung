@@ -3,6 +3,7 @@ import type { RawQuestion } from './parse'
 import { isPrize, type Met } from './surprise'
 import { DEFAULT_TIMER, isTimerSeconds, type TimerSeconds } from './timer'
 import type { Outcome } from './tiers'
+import type { Cleared } from './trophies'
 import { isWorldId, WORLDS, type WorldId } from './worlds'
 
 export interface GameRecord {
@@ -50,6 +51,8 @@ export interface SavedGame {
   hardcore?: boolean
   /** Questions swapped for another with «cambia domanda»: they count against the swaps and do not come back. */
   swapped?: string[]
+  /** Seconds of the timer the game was started with, 0 when off: it stays the same for the whole game. */
+  timer?: number
 }
 
 export interface SavedState {
@@ -76,6 +79,12 @@ export interface SavedState {
   reached: WorldId[]
   /** The game in progress in each world. */
   playing: Partial<Record<WorldId, SavedGame>>
+  /** Trophy id → when it was won. */
+  trophies: Record<string, number>
+  /** The worlds whose arrival was reached in easy mode and in hardcore mode. */
+  cleared: Cleared
+  /** The tour that points at the trophies button was done (it shows once). */
+  trophyTour: boolean
 }
 
 const KEY = 'parkflung:v1'
@@ -93,6 +102,9 @@ const EMPTY: SavedState = {
   world: WORLDS[0]!.id,
   reached: [],
   playing: {},
+  trophies: {},
+  cleared: { easy: [], hardcore: [] },
+  trophyTour: false,
 }
 
 function read(): SavedState {
@@ -121,10 +133,24 @@ function read(): SavedState {
       world: isWorldId(data.world) ? data.world : EMPTY.world,
       reached: Array.isArray(data.reached) ? data.reached.filter(isWorldId) : [],
       playing,
+      trophies: readTrophies(data.trophies),
+      cleared: {
+        easy: Array.isArray(data.cleared?.easy) ? data.cleared.easy.filter(isWorldId) : [],
+        hardcore: Array.isArray(data.cleared?.hardcore) ? data.cleared.hardcore.filter(isWorldId) : [],
+      },
+      trophyTour: data.trophyTour === true,
     }
   } catch {
     return EMPTY
   }
+}
+
+function readTrophies(value: unknown): Record<string, number> {
+  const trophies: Record<string, number> = {}
+  if (value && typeof value === 'object') {
+    for (const [id, at] of Object.entries(value)) if (typeof at === 'number') trophies[id] = at
+  }
+  return trophies
 }
 
 function readGame(value: unknown): SavedGame | null {
@@ -140,6 +166,7 @@ function readGame(value: unknown): SavedGame | null {
     retried: typeof game.retried === 'string' ? game.retried : undefined,
     hardcore: game.hardcore === true,
     swapped: Array.isArray(game.swapped) ? game.swapped.filter((id): id is string => typeof id === 'string') : undefined,
+    timer: typeof game.timer === 'number' ? game.timer : undefined,
   }
 }
 
@@ -213,6 +240,28 @@ export function saveGame(world: WorldId, game: SavedGame | null): void {
 }
 
 /** The walker reached the arrival of a world: the next one opens. */
+/** Wins the trophies not won yet; returns those new ones. */
+export function winTrophies(ids: string[], at = Date.now()): string[] {
+  const fresh = ids.filter((id) => !state.trophies[id])
+  if (fresh.length > 0) {
+    update((current) => {
+      const trophies = { ...current.trophies }
+      fresh.forEach((id) => (trophies[id] = at))
+      return { ...current, trophies }
+    })
+  }
+  return fresh
+}
+
+/** The arrival of a world in a mode, for the end-of-game trophies. */
+export function markCleared(world: WorldId, hardcore: boolean): void {
+  update((current) => {
+    const mode = hardcore ? 'hardcore' : 'easy'
+    if (current.cleared[mode].includes(world)) return current
+    return { ...current, cleared: { ...current.cleared, [mode]: [...current.cleared[mode], world] } }
+  })
+}
+
 export function markReached(world: WorldId): void {
   update((current) => (current.reached.includes(world) ? current : { ...current, reached: [...current.reached, world] }))
 }

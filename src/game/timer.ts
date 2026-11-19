@@ -1,7 +1,7 @@
 /** Seconds a player can choose for each question in Impostazioni. */
-export const TIMER_CHOICES = [30, 60, 120, 300] as const
+export const TIMER_CHOICES = [15, 30, 45, 60] as const
 export type TimerSeconds = (typeof TIMER_CHOICES)[number]
-export const DEFAULT_TIMER: TimerSeconds = 60
+export const DEFAULT_TIMER: TimerSeconds = 30
 
 export type TimerLevel = 'green' | 'yellow' | 'orange' | 'red'
 
@@ -24,7 +24,7 @@ export function formatClock(ms: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
-/** "30 s", "1 min", "2 min", "5 min". */
+/** "15 s", "30 s", "45 s", "60 s". */
 export function timerLabel(seconds: number): string {
-  return seconds < 60 ? `${seconds} s` : `${seconds / 60} min`
+  return `${seconds} s`
 }

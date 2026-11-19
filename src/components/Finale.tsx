@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { trophyInfo } from '../game/trophies'
 import { sfx } from '../game/sound'
 import type { WorldInfo } from '../game/worlds'
 import { Arrival, Walker } from './Art'
@@ -239,6 +240,7 @@ export function Finale({
   target,
   questions,
   unlocked,
+  trophies = [],
   onDone,
 }: {
   world: WorldInfo
@@ -246,6 +248,8 @@ export function Finale({
   questions: number
   /** The world this arrival opened, the first time it was reached. */
   unlocked?: WorldInfo
+  /** Trophies this arrival won. */
+  trophies?: string[]
   onDone: () => void
 }) {
   const level = 5
@@ -327,6 +331,14 @@ export function Finale({
             🔓 Hai sbloccato un nuovo mondo: {unlocked.icon} {unlocked.name}!
           </p>
         )}
+        {trophies.map((id, index) => {
+          const trophy = trophyInfo(id)
+          return trophy ? (
+            <p key={id} className="finale-unlock finale-trophy" style={{ '--i': index } as CSSProperties}>
+              🏆 Nuovo trofeo: {trophy.icon} {trophy.name}
+            </p>
+          ) : null
+        })}
       </div>
       <button ref={buttonRef} type="button" className={ready ? 'finale-button show' : 'finale-button'} onClick={onDone} tabIndex={ready ? 0 : -1}>
         Vedi il riepilogo

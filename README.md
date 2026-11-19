@@ -59,7 +59,7 @@ al traguardo del mondo. App per telefono (PWA), in italiano.
   poche per Marco B. Dentro ogni coppia le due fasce hanno lo stesso numero di risposte: le più facili
   vanno nella prima (bada che storia, Shave like a Bomber!), le meno ovvie nella seconda.
   Le risposte aggiunte da un secondo file per la stessa domanda finiscono una fascia più in alto.
-- **Timer (facoltativo):** in Impostazioni si accende un timer per ogni domanda, da 30 s, 1, 2 o 5 minuti.
+- **Timer (facoltativo):** in Impostazioni si accende un timer per ogni domanda, da 15, 30, 45 o 60 secondi.
   Sta nell'angolo in alto a destra, passa da verde a giallo, arancione e rosso; se finisce, quella
   domanda vale «morto di CACCA ADDOSSO !».
 - **Arrivo:** alla casa di Ale parte l'animazione più bella, a schermo intero (fuochi d'artificio, coriandoli,
@@ -75,7 +75,13 @@ al traguardo del mondo. App per telefono (PWA), in italiano.
   cielo resta alto come sempre e sale, la terra e il sentiero si allungano fino in fondo allo schermo
   (le curve diventano più alte), alberi, lampioni, partenza e traguardo restano della loro misura e si
   spostano con il terreno. Nella Home i pulsanti dei mondi restano sempre in fondo allo schermo.
-- **Solo tema chiaro**, anche quando il telefono è in modalità scura.
+- **Tema:** chiaro, anche quando il telefono è in modalità scura; con la modalità hardcore attiva tutto
+  il gioco passa al tema rosso scuro.
+- **Trofei:** pulsante con la coppa di fianco alle Impostazioni, 22 trofei. «Gioco finito» e «Gioco finito
+  hardcore» chiedono il traguardo di tutti e 5 i mondi nella stessa modalità; per ogni mondo un trofeo per
+  ogni timer (15 s diamante, 30 s oro, 45 s argento, 60 s bronzo), in facile o hardcore. Conta il timer
+  con cui è iniziata la partita. La prima volta dopo l'aggiornamento la Home si oscura e una freccia indica
+  il pulsante: si continua solo toccandolo.
 - **Nuove domande:** Impostazioni → «Carica domande da file» (JSON o testo, c'è un file di esempio).
 
 ## Formato delle domande

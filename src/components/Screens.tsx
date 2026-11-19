@@ -6,6 +6,7 @@ import { update, useSavedState } from '../game/store'
 import { rulesFor } from '../game/surprise'
 import { ladderFor, maxQuestions, stepOf, SWAPS, TIER_INFO, TIERS } from '../game/tiers'
 import { isUnlocked, WORLDS, type WorldId, type WorldInfo } from '../game/worlds'
+import { CupIcon, TrophyTour } from './Trophies'
 import { scoreOf, type Result } from './Game'
 import { Scene } from './Scene'
 
@@ -152,13 +153,16 @@ export function Home({
   onPlay,
   onNewGame,
   onSettings,
+  onTrophies,
 }: {
   bank: Question[]
   onPlay: (world: WorldId) => void
   onNewGame: (world: WorldId) => void
   onSettings: () => void
+  onTrophies: () => void
 }) {
   const saved = useSavedState()
+  const trophiesRef = useRef<HTMLButtonElement>(null)
   const fresh = countFresh(bank, saved.seen)
   const canStart = saved.repeat || fresh > 0
   const scrollerRef = useRef<HTMLDivElement>(null)
@@ -191,10 +195,22 @@ export function Home({
         <h1 className="title">
           Park<em>Flung</em>
         </h1>
-        <button type="button" className="icon-button" onClick={onSettings} aria-label="Impostazioni">
-          <GearIcon />
-        </button>
+        <div className="home-buttons">
+          <button
+            ref={trophiesRef}
+            type="button"
+            className={saved.trophyTour ? 'icon-button trophies-button' : 'icon-button trophies-button tour-target'}
+            onClick={onTrophies}
+            aria-label="Trofei"
+          >
+            <CupIcon />
+          </button>
+          <button type="button" className="icon-button" onClick={onSettings} aria-label="Impostazioni">
+            <GearIcon />
+          </button>
+        </div>
       </header>
+      {!saved.trophyTour && <TrophyTour target={trophiesRef} />}
       <div className="worlds" ref={scrollerRef} onScroll={onScroll}>
         {WORLDS.map((world, index) => (
           <WorldCard
@@ -658,7 +674,7 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
       <section className="panel">
         <h2>Progressi</h2>
         <p>
-          Azzera partite, record, le partite in corso, i mondi sbloccati e l'elenco delle domande già giocate. Le domande caricate
+          Azzera partite, record, le partite in corso, i mondi sbloccati, i trofei e l'elenco delle domande già giocate. Le domande caricate
           restano.
         </p>
         {confirming === 'reset' ? (
@@ -666,7 +682,7 @@ export function Settings({ bank, onBack }: { bank: Question[]; onBack: () => voi
             type="button"
             className="btn danger"
             onClick={() => {
-              update((current) => ({ ...current, seen: {}, games: [], playing: {}, reached: [], world: WORLDS[0]!.id }))
+              update((current) => ({ ...current, seen: {}, games: [], playing: {}, reached: [], trophies: {}, cleared: { easy: [], hardcore: [] }, world: WORLDS[0]!.id }))
               setConfirming(null)
             }}
           >

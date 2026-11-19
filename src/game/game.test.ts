@@ -297,7 +297,7 @@ describe('timer', () => {
     expect(formatClock(59_001)).toBe('1:00')
     expect(formatClock(4_200)).toBe('0:05')
     expect(formatClock(0)).toBe('0:00')
-    expect(TIMER_CHOICES.map(timerLabel)).toEqual(['30 s', '1 min', '2 min', '5 min'])
+    expect(TIMER_CHOICES.map(timerLabel)).toEqual(['15 s', '30 s', '45 s', '60 s'])
   })
 })
 
@@ -401,3 +401,30 @@ describe('tall screens', () => {
     expect(movePieces('M120 304 h60 M124 306 v-12', map)).toBeNull()
   })
 })
+
+describe('trophies', () => {
+  it('are two for the end of the game and four for each world, with different icons', async () => {
+    const { TROPHIES } = await import('./trophies')
+    expect(TROPHIES).toHaveLength(2 + 5 * 4)
+    expect(new Set(TROPHIES.map((trophy) => trophy.icon)).size).toBe(TROPHIES.length)
+    expect(new Set(TROPHIES.map((trophy) => trophy.id)).size).toBe(TROPHIES.length)
+  })
+
+  it('are won by the arrival with its mode and timer', async () => {
+    const { trophiesFor } = await import('./trophies')
+    const four = ['parcheggio', 'tigros', 'casa', 'varigotti'] as const
+    // The end of the game in a mode only with every world done in that same mode.
+    expect(trophiesFor({ world: 'decanter', hardcore: false, timer: 0, cleared: { easy: [...four], hardcore: [] } })).toEqual(['fine-facile'])
+    expect(trophiesFor({ world: 'decanter', hardcore: true, timer: 0, cleared: { easy: [...four], hardcore: [] } })).toEqual([])
+    expect(trophiesFor({ world: 'decanter', hardcore: true, timer: 45, cleared: { easy: [], hardcore: [...four] } })).toEqual([
+      'fine-hardcore',
+      'decanter-45',
+    ])
+    expect(trophiesFor({ world: 'casa', hardcore: true, timer: 0, cleared: { easy: [], hardcore: ['parcheggio', 'tigros', 'varigotti', 'decanter'] } })).toEqual([
+      'fine-hardcore',
+    ])
+    expect(trophiesFor({ world: 'tigros', hardcore: true, timer: 15, cleared: { easy: [], hardcore: [] } })).toEqual(['tigros-15'])
+    expect(trophiesFor({ world: 'casa', hardcore: false, timer: 120, cleared: { easy: [], hardcore: [] } })).toEqual([])
+  })
+})
+

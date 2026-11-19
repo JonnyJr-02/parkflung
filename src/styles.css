@@ -5160,3 +5160,220 @@ button {
     animation: none;
   }
 }
+
+/* ---------- Trophies ---------- */
+
+.home-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.trophies-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.trophies-count {
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  color: var(--muted);
+}
+
+.trophies-count strong {
+  font-weight: 400;
+  font-size: 3.4rem;
+  color: var(--ink);
+}
+
+.trophy-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 4px 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.trophy-row.two {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.trophy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.trophy-medal {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border: 3px solid var(--edge);
+  border-radius: 50%;
+  background: var(--medal);
+  box-shadow: 0 3px 0 var(--edge), inset 0 0 0 4px var(--medal-ring);
+  font-size: 1.7rem;
+}
+
+.trophy-icon {
+  filter: grayscale(1);
+  opacity: 0.35;
+}
+
+.trophy.won .trophy-icon {
+  filter: none;
+  opacity: 1;
+}
+
+.trophy:not(.won) .trophy-medal {
+  background: var(--line);
+  box-shadow: 0 3px 0 var(--edge);
+}
+
+.trophy-lock {
+  position: absolute;
+  right: -6px;
+  bottom: -4px;
+  font-size: 1rem;
+}
+
+.trophy-name {
+  font-weight: 700;
+  font-size: 0.8rem;
+  line-height: 1.15;
+}
+
+.trophy.won .trophy-name {
+  color: var(--ink);
+}
+
+.trophy:not(.won) .trophy-name {
+  color: var(--muted);
+}
+
+.metal-diamond { --medal: #c8f1ff; --medal-ring: #7fd6f5; }
+.metal-gold { --medal: #ffe58a; --medal-ring: #f2c230; }
+.metal-silver { --medal: #eef1f5; --medal-ring: #b9c2cf; }
+.metal-bronze { --medal: #f4c79b; --medal-ring: #c98a52; }
+.metal-ruby { --medal: #ffb3b3; --medal-ring: #e8323c; }
+
+.trophy.won.metal-diamond .trophy-medal {
+  box-shadow: 0 3px 0 var(--edge), inset 0 0 0 4px var(--medal-ring), 0 0 16px rgb(127 214 245 / 0.8);
+}
+
+.trophy-how {
+  display: block;
+  margin-top: 4px;
+}
+
+.finale-trophy {
+  background: #ffe58a;
+  animation-delay: calc(2.8s + var(--i) * 300ms);
+}
+
+/* ---------- The tour: the first time, everything dark but the trophies button ---------- */
+
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  animation: fade-in 400ms ease both;
+}
+
+.tour-block {
+  position: fixed;
+  pointer-events: auto;
+}
+
+.tour-hole {
+  position: fixed;
+  border-radius: 50%;
+  box-shadow: 0 0 0 200vmax rgb(10 8 16 / 0.72);
+  pointer-events: none;
+  animation: tour-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes tour-pulse {
+  0%, 100% { outline: 3px solid rgb(255 243 176 / 0.9); outline-offset: 0; }
+  50% { outline: 3px solid rgb(255 243 176 / 0.3); outline-offset: 6px; }
+}
+
+.tour-tip {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: 260px;
+  color: #fff8ea;
+  text-align: right;
+}
+
+.tour-arrow {
+  width: 60px;
+  height: 70px;
+  margin-right: 6px;
+  fill: none;
+  stroke: #fff3b0;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: tour-bob 1s ease-in-out infinite alternate;
+}
+
+@keyframes tour-bob {
+  from { transform: translate(0, 0); }
+  to { transform: translate(4px, -6px); }
+}
+
+.tour-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 1.02rem;
+}
+
+.tour-text strong {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.7rem;
+  color: #fff3b0;
+}
+
+/* Above the dark, the only thing to tap. */
+.tour-target {
+  position: relative;
+  z-index: 61;
+}
+
+/* ---------- Hardcore: the whole game in red ---------- */
+
+:root[data-theme='hardcore'] {
+  --bg: #2a0b10;
+  --surface: #40121a;
+  --ink: #fdebe6;
+  --edge: #0e0306;
+  --muted: #e2a49c;
+  --line: #5f1c25;
+  --primary: #ff3b30;
+  --primary-edge: #0e0306;
+  --primary-ink: #ffffff;
+  --teal: #ff7a45;
+  --mustard: #ffb23a;
+  --danger: #ff3b30;
+  --danger-edge: #0e0306;
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-hole,
+  .tour-arrow {
+    animation: none;
+  }
+}
